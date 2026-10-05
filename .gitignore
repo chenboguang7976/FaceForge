@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Models (too large for git - see MODELS.md)
+models/*.onnx
+models/*.pth
+models/*.pt
+models/*.pkl
+models/*.dfm
+models/*.dll
+models/*.so
+models/*.trt
+models/buffalo_l/
+models/liveportrait_onnx/
+models/dfm_models/
+!models/.gitkeep
+
+# Runtime files
+settings.json
+last_workspace.json
+*.log
+tensorrt-engines/
+
+# Temp & output
+Swap_Out/
+.thumbnails/
+.jobs/
+cache_file/
+temp/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
