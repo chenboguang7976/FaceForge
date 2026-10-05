@@ -162,6 +162,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "zh": "{done} / {total} · {fps} fps · 剩余 {eta}",
         "vi": "{done} / {total} · {fps} fps · còn {eta}",
     },
+    "progress.warmup": {
+        "en": "{done} / {total} · estimating speed…",
+        "zh": "{done} / {total} · 正在估算速度…",
+        "vi": "{done} / {total} · đang ước tính tốc độ…",
+    },
     "progress.done": {"en": "Saved: {path}", "zh": "已保存：{path}", "vi": "Đã lưu: {path}"},
     "progress.done_toast": {"en": "Done!", "zh": "完成！", "vi": "Hoàn tất!"},
     "progress.failed": {"en": "Processing failed", "zh": "处理失败", "vi": "Xử lý thất bại"},

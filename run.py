@@ -22,9 +22,10 @@ def main(argv=None):
     if args.edition:
         os.environ["FACEFORGE_EDITION"] = args.edition
 
-    from faceforge.helpers.logger import get_logger, setup_logging
+    from faceforge.helpers.logger import get_logger, install_crash_handlers, setup_logging
 
     setup_logging(args.debug)
+    install_crash_handlers()
     log = get_logger("main")
 
     if sys.platform == "win32":

@@ -294,7 +294,10 @@ class VideoProcessor:
             processed += 1
             window.append(time.perf_counter())
             if progress:
-                fps = (len(window) - 1) / (window[-1] - window[0]) if len(window) > 1 and window[-1] > window[0] else 0.0
+                # The first frames arrive in a burst from the pipeline buffer, so
+                # wait for a few samples before showing a (meaningful) rate.
+                span = window[-1] - window[0]
+                fps = (len(window) - 1) / span if len(window) >= 8 and span > 0 else 0.0
                 progress(processed, max(total, processed), fps)
 
         try:

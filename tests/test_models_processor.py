@@ -53,3 +53,38 @@ def test_missing_model_raises(models, tmp_path):
     assert models.missing(["m0", "m3"]) == ["m3"]
     with pytest.raises(ModelMissingError):
         models.session("m3")
+
+
+def test_directml_runs_are_serialized(models):
+    import threading
+
+    models.session("m0")
+    models._session_device["m0"] = "directml"  # pretend it was loaded on DirectML
+    inside, overlaps = [0], [0]
+    real_run = models._sessions["m0"].run
+
+    class Spy:
+        def __getattr__(self, name):
+            return getattr(models._sessions_real, name)
+
+    models._sessions_real = models._sessions["m0"]
+
+    def slow_run(*args, **kwargs):
+        inside[0] += 1
+        if inside[0] > 1:
+            overlaps[0] += 1
+        import time
+        time.sleep(0.02)
+        inside[0] -= 1
+        return real_run(*args, **kwargs)
+
+    spy = Spy()
+    spy.run = slow_run
+    models._sessions["m0"] = spy
+    threads = [threading.Thread(target=models.run, args=("m0", {"x": np.ones((1, 4), np.float32)}))
+               for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert overlaps[0] == 0

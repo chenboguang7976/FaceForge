@@ -61,6 +61,10 @@ class ModelsProcessor:
         self._lock = threading.RLock()
         self._load_locks: dict[str, threading.Lock] = {}
         self._pinned: set[str] = set()
+        # DirectML/CoreML sessions are not safe to Run from several threads at
+        # once (native crash seen on a GTX 1050 during video jobs); GPU calls
+        # are serialized, CPU pre/post-processing still runs in parallel.
+        self._gpu_run_lock = threading.Lock()
         self._cuda_dlls_loaded = False
         self.on_warning: Callable[[str], None] | None = None
         self.on_loading: Callable[[str, bool], None] | None = None
@@ -263,5 +267,9 @@ class ModelsProcessor:
             dtype = _ORT_TYPES.get(meta.type, np.float32)
             value = np.asarray(feeds[meta.name])
             typed[meta.name] = value if value.dtype == dtype else value.astype(dtype)
-        outputs = sess.run(None, typed)
+        if self._session_device.get(key) in ("directml", "coreml"):
+            with self._gpu_run_lock:
+                outputs = sess.run(None, typed)
+        else:
+            outputs = sess.run(None, typed)
         return [o.astype(np.float32) if o.dtype == np.float16 else o for o in outputs]

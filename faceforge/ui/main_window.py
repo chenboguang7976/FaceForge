@@ -476,6 +476,7 @@ class MainWindow(QMainWindow):
         self._state_prev = state
         self.source_drop.setEnabled(not running)
         self.target_drop.setEnabled(not running)
+        self.timeline.setEnabled(not running)
         self.settings_panel.setEnabled(not running)
         if not running:
             self.progress_label.setText(tr("action.ready_hint") if state == "idle" else self.progress_label.text())
@@ -487,7 +488,10 @@ class MainWindow(QMainWindow):
 
     def _on_progress(self, done: int, total: int, fps: float) -> None:
         self.progress.set_fraction(done / max(1, total))
-        eta = (total - done) / fps if fps > 0 else 0
+        if fps <= 0:
+            self.progress_label.setText(tr("progress.warmup", done=done, total=total))
+            return
+        eta = (total - done) / fps
         self.progress_label.setText(tr("progress.text", done=done, total=total, fps=f"{fps:.1f}",
                                        eta=_fmt_time(eta)))
 
