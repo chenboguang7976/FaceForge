@@ -310,11 +310,22 @@ class SettingsPanel(QWidget):
         row.addWidget(manager, 1)
         sec.add(buttons)
 
+        self.active_label = QLabel()
+        self.active_label.setWordWrap(True)
+        self.active_label.setStyleSheet("font-weight: 600;")
+        sec.add(self.active_label)
         self.hw_label = QLabel()
         self.hw_label.setObjectName("Hint")
         self.hw_label.setWordWrap(True)
-        self.hw_label.setText(hw.summary())
         sec.add(self.hw_label)
+        i18n.bind(self.active_label, self._refresh_device_text)
+        self.c.runtime_changed.connect(self._refresh_device_text)
+
+    def _refresh_device_text(self) -> None:
+        models = self.c.models
+        device = models.device_label + (f" · {models.adapter_name}" if models.adapter_name else "")
+        self.active_label.setText(tr("system.active", device=device))
+        self.hw_label.setText(tr("system.detected", hardware=self.c.hardware.summary()))
 
     # ------------------------------------------------------------------ sync
     def load(self) -> None:

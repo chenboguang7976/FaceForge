@@ -373,6 +373,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "zh": "NVIDIA 显卡上 CUDA 最快。DirectML 适用于任何 Windows 显卡，无需额外安装。",
         "vi": "CUDA nhanh nhất trên NVIDIA. DirectML chạy trên mọi GPU Windows, không cần cài thêm.",
     },
+    "system.active": {"en": "In use: {device}", "zh": "当前使用：{device}", "vi": "Đang dùng: {device}"},
+    "system.detected": {"en": "Detected: {hardware}", "zh": "检测到：{hardware}", "vi": "Phát hiện: {hardware}"},
     "system.gpu": {"en": "Graphics card", "zh": "显卡", "vi": "Card đồ họa"},
     "system.gpu.auto": {"en": "Automatic (fastest)", "zh": "自动（最快）", "vi": "Tự động (nhanh nhất)"},
     "system.gpu.hint": {

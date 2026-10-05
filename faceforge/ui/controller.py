@@ -73,6 +73,7 @@ class Controller(QObject):
     model_loading = Signal(str, bool)
     message = Signal(str, str)                        # text, kind (info/success/warning/error)
     settings_applied = Signal()
+    runtime_changed = Signal()                        # device / GPU actually in use changed
     _invoke = Signal(object, object)
 
     def __init__(self, settings: Settings):
@@ -154,6 +155,8 @@ class Controller(QObject):
         self.models.models_dir = self.settings.models_dir
         self.models.configure(self.settings.get("device"), self.settings.get("execution_workers"),
                               self.settings.get("max_loaded_models"), self.settings.get("gpu_device_id"))
+        self.runtime_changed.emit()
+        self.request_preview()
 
     # --------------------------------------------------------------- models
     def _ensure(self, keys: list[str], then: Callable[[], None]) -> bool:

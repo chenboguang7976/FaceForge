@@ -163,9 +163,17 @@ class HardwareInfo:
     def has_coreml(self) -> bool:
         return "CoreMLExecutionProvider" in self.providers
 
+    def gpu_names(self) -> list[str]:
+        """Every GPU found (both cards on dual-GPU laptops)."""
+        def label(name: str, vram_mb: int) -> str:
+            return f"{name} ({vram_mb // 1024} GB)" if vram_mb >= 1024 else name
+
+        if self.dml_adapters:
+            return [label(a.name, a.vram_mb) for a in self.dml_adapters if not a.software]
+        return [label(g.name, g.vram_mb) for g in self.nvidia_gpus]
+
     def summary(self) -> str:
-        gpu = self.primary_gpu
-        gpu_text = f"{gpu.name} ({gpu.vram_mb // 1024} GB)" if gpu else "—"
+        gpu_text = " + ".join(self.gpu_names()) or "—"
         return (f"{self.cpu_name} · {self.cpu_cores}C/{self.cpu_threads}T · "
                 f"RAM {round(self.ram_mb / 1024)} GB · GPU {gpu_text}")
 
@@ -198,7 +206,20 @@ def _query_nvidia() -> list[GpuInfo]:
 
 def _cpu_name() -> str:
     name = platform.processor() or ""
-    if sys.platform.startswith("linux"):
+    if sys.platform == "win32":
+        # platform.processor() gives "Intel64 Family 6 Model 158 ..."; the
+        # marketing name ("Intel(R) Core(TM) i5-7300HQ") lives in the registry.
+        try:
+            import winreg
+
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                                r"HARDWARE\DESCRIPTION\System\CentralProcessor\0") as key:
+                value, _ = winreg.QueryValueEx(key, "ProcessorNameString")
+                if value and value.strip():
+                    return " ".join(value.split())
+        except OSError:
+            pass
+    elif sys.platform.startswith("linux"):
         try:
             with open("/proc/cpuinfo", encoding="utf-8") as f:
                 for line in f:

@@ -319,6 +319,7 @@ class MainWindow(QMainWindow):
         c.model_loading.connect(self._on_model_loading)
         c.message.connect(self._notify)
         c.settings_applied.connect(self._refresh_chips)
+        c.runtime_changed.connect(self._refresh_chips)
 
         self.monitor = ResourceMonitor(bool(c.hardware.nvidia_gpus), parent=self)
         self.monitor.updated.connect(self._on_stats)
