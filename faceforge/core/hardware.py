@@ -47,6 +47,85 @@ class GpuInfo:
 
 
 @dataclass
+class DmlAdapter:
+    """A DirectX 12 adapter as DirectML numbers them (DXGI enumeration order)."""
+    index: int
+    name: str
+    vendor_id: int
+    vram_mb: int
+    software: bool = False
+
+    @property
+    def is_discrete(self) -> bool:
+        # NVIDIA, AMD; Intel Arc also reports dedicated VRAM.
+        return self.vendor_id in (0x10DE, 0x1002) or self.vram_mb >= 2048
+
+
+def _dxgi_adapters() -> list[DmlAdapter]:
+    """Enumerate DXGI adapters (Windows only) via ctypes; no extra dependencies.
+
+    On laptops with two GPUs, adapter 0 is usually the integrated Intel GPU
+    that drives the display, so DirectML must be told explicitly to use the
+    NVIDIA/AMD card.
+    """
+    if sys.platform != "win32":
+        return []
+    import ctypes
+    from ctypes import wintypes
+
+    class GUID(ctypes.Structure):
+        _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort),
+                    ("Data3", ctypes.c_ushort), ("Data4", ctypes.c_ubyte * 8)]
+
+    class LUID(ctypes.Structure):
+        _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
+
+    class DXGI_ADAPTER_DESC1(ctypes.Structure):  # noqa: N801 - Windows struct name
+        _fields_ = [("Description", ctypes.c_wchar * 128), ("VendorId", ctypes.c_uint),
+                    ("DeviceId", ctypes.c_uint), ("SubSysId", ctypes.c_uint), ("Revision", ctypes.c_uint),
+                    ("DedicatedVideoMemory", ctypes.c_size_t), ("DedicatedSystemMemory", ctypes.c_size_t),
+                    ("SharedSystemMemory", ctypes.c_size_t), ("AdapterLuid", LUID), ("Flags", ctypes.c_uint)]
+
+    def method(obj, index, *argtypes):
+        vtable = ctypes.cast(obj, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
+        return ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, *argtypes)(vtable[index])
+
+    adapters: list[DmlAdapter] = []
+    try:
+        iid = GUID(0x770AAE78, 0xF26F, 0x4DBA,
+                   (ctypes.c_ubyte * 8)(0xA8, 0x29, 0x25, 0x3C, 0x83, 0xD1, 0xB3, 0x87))  # IDXGIFactory1
+        factory = ctypes.c_void_p()
+        if ctypes.WinDLL("dxgi").CreateDXGIFactory1(ctypes.byref(iid), ctypes.byref(factory)) != 0:
+            return []
+        try:
+            for i in range(16):
+                adapter = ctypes.c_void_p()
+                # IDXGIFactory1::EnumAdapters1 (vtable slot 12)
+                if method(factory, 12, ctypes.c_uint, ctypes.POINTER(ctypes.c_void_p))(
+                        factory, i, ctypes.byref(adapter)) != 0:
+                    break
+                desc = DXGI_ADAPTER_DESC1()
+                # IDXGIAdapter1::GetDesc1 (vtable slot 10)
+                if method(adapter, 10, ctypes.POINTER(DXGI_ADAPTER_DESC1))(adapter, ctypes.byref(desc)) == 0:
+                    adapters.append(DmlAdapter(i, desc.Description.strip(), desc.VendorId,
+                                               int(desc.DedicatedVideoMemory // 2**20), bool(desc.Flags & 2)))
+                method(adapter, 2)(adapter)  # Release
+        finally:
+            method(factory, 2)(factory)  # Release
+    except (OSError, AttributeError, ValueError) as exc:
+        log.debug("DXGI enumeration failed: %s", exc)
+    return adapters
+
+
+def pick_dml_adapter(adapters: list[DmlAdapter]) -> DmlAdapter | None:
+    """The fastest-looking hardware adapter: discrete first, then most VRAM."""
+    hardware_adapters = [a for a in adapters if not a.software]
+    if not hardware_adapters:
+        return None
+    return max(hardware_adapters, key=lambda a: (a.is_discrete, a.vram_mb, -a.index))
+
+
+@dataclass
 class HardwareInfo:
     os_name: str
     cpu_name: str
@@ -55,6 +134,11 @@ class HardwareInfo:
     ram_mb: int
     nvidia_gpus: list[GpuInfo] = field(default_factory=list)
     providers: list[str] = field(default_factory=list)
+    dml_adapters: list[DmlAdapter] = field(default_factory=list)
+
+    @property
+    def best_dml_adapter(self) -> DmlAdapter | None:
+        return pick_dml_adapter(self.dml_adapters)
 
     @property
     def primary_gpu(self) -> GpuInfo | None:
@@ -143,7 +227,10 @@ def detect_hardware() -> HardwareInfo:
         ram_mb=int(psutil.virtual_memory().total / 2**20),
         nvidia_gpus=_query_nvidia(),
         providers=providers,
+        dml_adapters=_dxgi_adapters() if "DmlExecutionProvider" in providers else [],
     )
+    for adapter in info.dml_adapters:
+        log.info("DirectX adapter %d: %s (%d MB VRAM)", adapter.index, adapter.name, adapter.vram_mb)
     log.info("Hardware: %s | providers: %s", info.summary(), ", ".join(providers))
     return info
 

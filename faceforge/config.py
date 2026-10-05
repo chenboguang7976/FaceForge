@@ -12,7 +12,7 @@ from faceforge.helpers.paths import default_models_dir, default_output_dir, sett
 
 log = get_logger(__name__)
 
-SETTINGS_VERSION = 2
+SETTINGS_VERSION = 3
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "settings_version": SETTINGS_VERSION,
@@ -20,7 +20,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 
     # --- Device & performance ---
     "device": "auto",                  # auto | cuda | directml | coreml | cpu
-    "gpu_device_id": 0,
+    "gpu_device_id": -1,               # -1 = pick the best GPU automatically
     "execution_workers": 2,
     "max_loaded_models": 3,
     "performance_profile": "low",      # informational, from hardware detection
@@ -94,6 +94,10 @@ class Settings:
             log.warning("Settings unreadable (%s); using defaults.", exc)
             self.is_new = True
             return
+        if saved.get("settings_version") == 2:
+            # v2 stored GPU 0, which on dual-GPU laptops is the integrated GPU.
+            saved["gpu_device_id"] = -1
+            saved["settings_version"] = SETTINGS_VERSION
         if saved.get("settings_version") != SETTINGS_VERSION:
             # v1 used different keys/values; only carry over what still means the same thing.
             log.info("Migrating settings from version %s", saved.get("settings_version"))

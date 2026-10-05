@@ -65,3 +65,29 @@ def test_presets_only_touch_preset_keys():
     for name in presets.PRESETS:
         values = presets.preset_settings(name, machine(16, 4), "directml")
         assert set(values) == set(presets.PRESET_KEYS)
+
+
+def test_dml_prefers_discrete_gpu_on_dual_gpu_laptops():
+    from faceforge.core.hardware import DmlAdapter, pick_dml_adapter
+
+    intel = DmlAdapter(0, "Intel(R) HD Graphics 630", 0x8086, 128)
+    nvidia = DmlAdapter(1, "NVIDIA GeForce GTX 1050", 0x10DE, 4096)
+    basic = DmlAdapter(2, "Microsoft Basic Render Driver", 0x1414, 0, software=True)
+    assert pick_dml_adapter([intel, nvidia, basic]) is nvidia
+    assert pick_dml_adapter([intel, basic]) is intel
+    assert pick_dml_adapter([basic]) is None
+
+
+def test_models_processor_uses_best_dml_adapter_unless_overridden(tmp_path):
+    from faceforge.core.hardware import DmlAdapter
+    from faceforge.core.models_processor import ModelsProcessor
+
+    hw = machine(16, 4, 6.1, providers=("DmlExecutionProvider", "CPUExecutionProvider"))
+    hw.dml_adapters = [DmlAdapter(0, "Intel(R) HD Graphics 630", 0x8086, 128),
+                       DmlAdapter(1, "NVIDIA GeForce GTX 1050", 0x10DE, 4096)]
+    mp = ModelsProcessor(tmp_path, device="directml", gpu_device_id=-1, hardware=hw)
+    assert mp.device == "directml"
+    assert mp._providers("directml")[0] == ("DmlExecutionProvider", {"device_id": 1})
+    assert mp.adapter_name == "NVIDIA GeForce GTX 1050"
+    mp.configure("directml", 2, 3, gpu_device_id=0)
+    assert mp._providers("directml")[0][1]["device_id"] == 0

@@ -284,6 +284,15 @@ class SettingsPanel(QWidget):
         devices.append(("cpu", "CPU"))
         self.device = sec.add(ComboRow("system.device", devices, hint_key="system.device.hint"))
         self.device.combo.currentIndexChanged.connect(lambda _: self._set("device", self.device.value_of()))
+        gpus = [(-1, "system.gpu.auto")]
+        if hw.has_directml:
+            gpus += [(a.index, f"{a.name} ({a.vram_mb // 1024} GB)" if a.vram_mb >= 1024 else a.name)
+                     for a in hw.dml_adapters if not a.software]
+        elif hw.has_cuda:
+            gpus += [(i, g.name) for i, g in enumerate(hw.nvidia_gpus)]
+        self.gpu = sec.add(ComboRow("system.gpu", gpus, hint_key="system.gpu.hint"))
+        self.gpu.setVisible(len(gpus) > 2)  # only worth showing with a real choice
+        self.gpu.combo.currentIndexChanged.connect(lambda _: self._set("gpu_device_id", self.gpu.value_of()))
         self.workers = sec.add(SliderRow("system.workers", 1, 8, str, "system.workers.hint"))
         self.workers.value_changed.connect(lambda v: self._set("execution_workers", v))
         self.max_models = sec.add(SliderRow("system.max_models", 1, 10, str, "system.max_models.hint"))
@@ -355,6 +364,7 @@ class SettingsPanel(QWidget):
         self.keep_audio.set_value(s.get("keep_audio"))
 
         self.device.set_value(s.get("device"))
+        self.gpu.set_value(int(s.get("gpu_device_id")))
         self.workers.set_value(s.get("execution_workers"))
         self.max_models.set_value(s.get("max_loaded_models"))
         self._loading = False

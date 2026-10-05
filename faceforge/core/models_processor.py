@@ -50,7 +50,7 @@ class ModelsProcessor:
     """Loads, caches and runs ONNX models. Safe to call from worker threads."""
 
     def __init__(self, models_dir: str | Path, device: str = "auto", workers: int = 2,
-                 max_loaded: int = 3, gpu_device_id: int = 0,
+                 max_loaded: int = 3, gpu_device_id: int = -1,
                  hardware: HardwareInfo | None = None):
         if ort is None:
             raise RuntimeError("onnxruntime is not installed")
@@ -67,7 +67,7 @@ class ModelsProcessor:
         self.configure(device, workers, max_loaded, gpu_device_id)
 
     # ------------------------------------------------------------------ config
-    def configure(self, device: str, workers: int, max_loaded: int, gpu_device_id: int = 0) -> None:
+    def configure(self, device: str, workers: int, max_loaded: int, gpu_device_id: int = -1) -> None:
         resolved = resolve_device(device, self.hardware)
         with self._lock:
             changed = (getattr(self, "device", None) != resolved
@@ -82,6 +82,29 @@ class ModelsProcessor:
         self._trim()
         log.info("Execution device: %s (requested %s), workers=%d, max models=%d",
                  self.device, device, self.workers, self.max_loaded)
+
+    def dml_adapter_index(self) -> int:
+        """Requested adapter if valid, otherwise the best one (-1 = automatic)."""
+        indexes = {a.index for a in self.hardware.dml_adapters}
+        if self.gpu_device_id >= 0 and (not indexes or self.gpu_device_id in indexes):
+            return self.gpu_device_id
+        best = self.hardware.best_dml_adapter
+        return best.index if best else 0
+
+    @property
+    def adapter_name(self) -> str:
+        """Human-readable name of the GPU actually used."""
+        if self.device == "directml":
+            index = self.dml_adapter_index()
+            for adapter in self.hardware.dml_adapters:
+                if adapter.index == index:
+                    return adapter.name
+            return f"GPU {index}"
+        if self.device == "cuda":
+            gpus = self.hardware.nvidia_gpus
+            index = max(0, self.gpu_device_id)
+            return gpus[index].name if index < len(gpus) else "NVIDIA GPU"
+        return ""
 
     @property
     def device_label(self) -> str:
@@ -103,7 +126,7 @@ class ModelsProcessor:
     def _providers(self, device: str) -> list:
         if device == "cuda":
             options = {
-                "device_id": self.gpu_device_id,
+                "device_id": max(0, self.gpu_device_id),
                 "arena_extend_strategy": "kSameAsRequested",
                 "cudnn_conv_algo_search": "HEURISTIC",
             }
@@ -113,8 +136,9 @@ class ModelsProcessor:
                 options["gpu_mem_limit"] = max(1024, gpu.vram_mb - 768) * 2**20
             return [("CUDAExecutionProvider", options), "CPUExecutionProvider"]
         if device == "directml":
-            return [("DmlExecutionProvider", {"device_id": self.gpu_device_id,
-                                              "performance_preference": "high_performance"}),
+            # An explicit DXGI index: on dual-GPU laptops index 0 is usually the
+            # integrated GPU, so never rely on the default.
+            return [("DmlExecutionProvider", {"device_id": self.dml_adapter_index()}),
                     "CPUExecutionProvider"]
         if device == "coreml":
             return ["CoreMLExecutionProvider", "CPUExecutionProvider"]
@@ -148,17 +172,7 @@ class ModelsProcessor:
                     log.debug("preload_dlls failed: %s", exc)
         path = str(self.path(key))
         providers = self._providers(device)
-        try:
-            return ort.InferenceSession(path, sess_options=self._session_options(device),
-                                        providers=providers)
-        except Exception:
-            if device != "directml":
-                raise
-            # Older ORT builds reject unknown DirectML options.
-            return ort.InferenceSession(
-                path, sess_options=self._session_options(device),
-                providers=[("DmlExecutionProvider", {"device_id": self.gpu_device_id}),
-                           "CPUExecutionProvider"])
+        return ort.InferenceSession(path, sess_options=self._session_options(device), providers=providers)
 
     def session(self, key: str) -> "ort.InferenceSession":
         with self._lock:

@@ -341,8 +341,8 @@ class MainWindow(QMainWindow):
 
     def _refresh_chips(self) -> None:
         c = self.controller
-        gpu = c.hardware.primary_gpu
-        device = c.models.device_label + (f" · {gpu.name}" if gpu and c.models.device != "cpu" else "")
+        adapter = c.models.adapter_name
+        device = c.models.device_label + (f" · {adapter}" if adapter else "")
         self.device_chip.setText(device)
         self.profile_chip.setText(tr(f"profile.{self.settings.get('performance_profile')}"))
 
