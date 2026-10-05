@@ -65,6 +65,14 @@ a = Analysis(
     excludes=EXCLUDES,
     noarchive=False,
 )
+# Swap in our OpenCV loader config (see packaging/cv2_config.py).
+def _is_cv2_config(entry):
+    return entry[0].replace("\\", "/") == "cv2/config.py"
+
+
+a.datas = [e for e in a.datas if not _is_cv2_config(e)]
+a.datas.append(("cv2/config.py", str(ROOT / "packaging" / "cv2_config.py"), "DATA"))
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
