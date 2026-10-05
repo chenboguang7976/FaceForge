@@ -14,6 +14,11 @@ def parse_args(argv=None):
     parser.add_argument("--edition", choices=("pro", "lite"), help="override the build edition")
     parser.add_argument("--selftest", action="store_true",
                         help="check the installation/bundle (inference, ffmpeg, UI) and exit")
+    # Internal: one case of the GPU diagnostic, run in a child process.
+    parser.add_argument("--diagnose-case", help=argparse.SUPPRESS)
+    parser.add_argument("--diagnose-video", help=argparse.SUPPRESS)
+    parser.add_argument("--diagnose-device", default="auto", help=argparse.SUPPRESS)
+    parser.add_argument("--diagnose-out", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
@@ -27,6 +32,11 @@ def main(argv=None):
     setup_logging(args.debug)
     install_crash_handlers()
     log = get_logger("main")
+
+    if args.diagnose_case:  # child process of the GPU diagnostic: no UI
+        from faceforge.diagnose import run_case
+
+        return run_case(args.diagnose_case, args.diagnose_video, args.diagnose_device, args.diagnose_out)
 
     if sys.platform == "win32":
         try:  # Group the taskbar icon under FaceForge rather than python.exe.

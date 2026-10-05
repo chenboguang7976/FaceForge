@@ -379,6 +379,26 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "vi": "CUDA nhanh nhất trên NVIDIA. DirectML chạy trên mọi GPU Windows, không cần cài thêm.",
     },
     "system.active": {"en": "In use: {device}", "zh": "当前使用：{device}", "vi": "Đang dùng: {device}"},
+    "system.fallback": {
+        "en": "⚠ Running on CPU instead (GPU failed to start): {models}",
+        "zh": "⚠ GPU 启动失败，改用 CPU 运行：{models}",
+        "vi": "⚠ GPU không khởi động được, đang chạy bằng CPU: {models}",
+    },
+    "diagnose.button": {"en": "GPU diagnostic…", "zh": "GPU 诊断…", "vi": "Chẩn đoán GPU…"},
+    "diagnose.title": {"en": "GPU diagnostic", "zh": "GPU 诊断", "vi": "Chẩn đoán GPU"},
+    "diagnose.intro": {
+        "en": "Runs 6 short tests on this computer's GPU with a video you choose (about 90 frames each, "
+              "10–30 minutes in total), each in a separate process so a crash can't close FaceForge.\n\n"
+              "The report is saved in the logs folder and opened when finished. Continue?",
+        "zh": "将使用您选择的视频在本机 GPU 上运行 6 项简短测试（每项约 90 帧，共约 10–30 分钟）。"
+              "每项测试在独立进程中运行，即使崩溃也不会关闭 FaceForge。\n\n报告将保存在 logs 文件夹并在完成后打开。继续吗？",
+        "vi": "Chạy 6 phép thử ngắn trên GPU của máy này với video bạn chọn (mỗi phép khoảng 90 khung hình, "
+              "tổng cộng 10–30 phút). Mỗi phép chạy trong tiến trình riêng nên dù có crash cũng không làm "
+              "đóng FaceForge.\n\nBáo cáo được lưu trong thư mục logs và tự mở khi xong. Tiếp tục?",
+    },
+    "diagnose.running": {"en": "Diagnosing: {case}…", "zh": "诊断中：{case}…", "vi": "Đang chẩn đoán: {case}…"},
+    "diagnose.done": {"en": "Diagnostic report saved: {path}", "zh": "诊断报告已保存：{path}",
+                      "vi": "Đã lưu báo cáo chẩn đoán: {path}"},
     "system.detected": {"en": "Detected: {hardware}", "zh": "检测到：{hardware}", "vi": "Phát hiện: {hardware}"},
     "system.gpu": {"en": "Graphics card", "zh": "显卡", "vi": "Card đồ họa"},
     "system.gpu.auto": {"en": "Automatic (fastest)", "zh": "自动（最快）", "vi": "Tự động (nhanh nhất)"},

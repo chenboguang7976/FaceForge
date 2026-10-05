@@ -41,6 +41,14 @@ _ORT_TYPES = {
 }
 
 
+_PROVIDER_DEVICE = {
+    "CUDAExecutionProvider": "cuda",
+    "DmlExecutionProvider": "directml",
+    "CoreMLExecutionProvider": "coreml",
+    "CPUExecutionProvider": "cpu",
+}
+
+
 class ModelMissingError(RuntimeError):
     def __init__(self, keys: list[str]):
         super().__init__("Missing models: " + ", ".join(keys))
@@ -62,6 +70,7 @@ class ModelsProcessor:
         self._lock = threading.RLock()
         self._load_locks: dict[str, threading.Lock] = {}
         self._pinned: set[str] = set()
+        self.fallbacks: dict[str, str] = {}   # model key -> device actually used, when not self.device
         # DirectML/CoreML sessions are not safe to Run from several threads at
         # once (native crash seen on a GTX 1050 during video jobs); GPU calls
         # are serialized, CPU pre/post-processing still runs in parallel.
@@ -217,9 +226,23 @@ class ModelsProcessor:
 
             active = sess.get_providers()[0]
             log.info("Loaded %s [%s]", key, active)
+            # onnxruntime silently falls back to CPU when a GPU provider fails to
+            # initialise (e.g. DirectML "display adapter handle is invalid"), so
+            # record what actually runs instead of what was requested.
+            actual = _PROVIDER_DEVICE.get(active, "cpu")
+            if actual != device:
+                log.warning("%s: requested %s but onnxruntime is using %s", key, device, active)
+                if self.on_warning:
+                    self.on_warning(f"{MODELS[key].title}: {device} → {actual}")
             with self._lock:
                 self._sessions[key] = sess
-                self._session_device[key] = device
+                self._session_device[key] = actual
+                if actual != self.device:
+                    self.fallbacks[key] = actual
+                else:
+                    self.fallbacks.pop(key, None)
+            if self.on_loading:  # again, now that the actual device is recorded
+                self.on_loading(key, False)
             self._trim()
             return sess
 
@@ -241,6 +264,7 @@ class ModelsProcessor:
                     continue
                 del self._sessions[key]
                 self._session_device.pop(key, None)
+                self.fallbacks.pop(key, None)
                 log.info("Unloaded %s (cache limit %d)", key, limit)
                 evicted = True
         if evicted:
@@ -250,6 +274,7 @@ class ModelsProcessor:
         with self._lock:
             self._sessions.clear()
             self._session_device.clear()
+            self.fallbacks.clear()
         gc.collect()
 
     def loaded(self) -> list[str]:

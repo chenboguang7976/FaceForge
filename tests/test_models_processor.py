@@ -88,3 +88,15 @@ def test_directml_runs_are_serialized(models):
     for t in threads:
         t.join()
     assert overlaps[0] == 0
+
+
+def test_silent_provider_fallback_is_recorded(models, monkeypatch):
+    """onnxruntime may fall back to CPU without raising; the app must notice."""
+    warnings = []
+    models.on_warning = warnings.append
+    models.device = "directml"  # pretend DirectML was requested ...
+    monkeypatch.setattr(models, "_providers", lambda device: ["CPUExecutionProvider"])  # ... but CPU runs
+    models.session("m1")
+    assert models._session_device["m1"] == "cpu"
+    assert models.fallbacks == {"m1": "cpu"}
+    assert warnings and "directml" in warnings[0]

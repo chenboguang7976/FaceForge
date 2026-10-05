@@ -8,7 +8,8 @@ pipeline  The real video pipeline (Balanced preset, 2 workers) on a generated cl
 Lock behaviour comes from FACEFORGE_DML_SERIALIZE (1 = fixed build, 0 = old
 behaviour); for `raw` the lock is applied here when --lock is given.
 
-Exit code 0 = finished without error. A native crash shows up as a non-zero
+Exit code 0 = finished without error; 3 = INCONCLUSIVE (DirectML did not
+actually run, e.g. no usable D3D12 adapter). A native crash shows up as a non-zero
 exit code (0xC0000005 = 3221225477 = access violation) plus a faulthandler
 traceback on stderr.
 """
@@ -34,6 +35,9 @@ def raw(models_dir: Path, threads: int, runs: int, use_lock: bool) -> int:
     sess = ort.InferenceSession(str(models_dir / "gpen_bfr_256.onnx"),
                                 providers=[("DmlExecutionProvider", {"device_id": 0})])
     print("providers:", sess.get_providers(), flush=True)
+    if sess.get_providers()[0] != "DmlExecutionProvider":
+        print("RESULT INCONCLUSIVE raw: DirectML did not initialise, onnxruntime fell back to CPU", flush=True)
+        return 3
     lock = threading.Lock()
     errors: list[str] = []
     done = [0]
@@ -124,6 +128,10 @@ def pipeline(models_dir: Path, image: Path, workdir: Path, device: str = "direct
     output, _ = VideoProcessor(pipe).run(job, progress)
     elapsed = time.perf_counter() - start
     info = probe_video(str(output))
+    if set(mp._session_device.values()) != {device}:
+        print(f"RESULT INCONCLUSIVE pipeline: sessions ran on {sorted(set(mp._session_device.values()))}, "
+              f"not {device}", flush=True)
+        return 3
     print(f"RESULT pipeline serialize={mp.serialize_gpu} frames={info.frame_count} audio={info.has_audio} "
           f"time={elapsed:.1f}s fps={last[0] / elapsed:.2f}", flush=True)
     return 0 if info.frame_count == 16 and info.has_audio else 1

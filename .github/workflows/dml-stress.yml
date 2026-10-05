@@ -5,15 +5,17 @@ name: DirectML stress (A/B)
 # GTX/Radeon/Intel GPU are exercised. Each case runs in its own process so a
 # native crash in one case doesn't hide the others.
 
+# GitHub-hosted Windows runners have no D3D12 adapter DirectML can use (run
+# #1 on 2026-10-05: "C0262002 Specified display adapter handle is invalid",
+# every case silently fell back to CPU), so this only gives real answers on
+# a self-hosted runner with a GPU. Manual trigger only; cases where DirectML
+# did not run are reported INCONCLUSIVE and fail the job.
 on:
-  push:
-    branches: [main, "claude/**"]
-    paths:
-      - "faceforge/core/**"
-      - "faceforge/processors/**"
-      - "tests/stress/**"
-      - ".github/workflows/dml-stress.yml"
   workflow_dispatch:
+    inputs:
+      runner:
+        description: "runs-on label (e.g. a self-hosted Windows GPU runner)"
+        default: windows-2022
 
 concurrency:
   group: dml-stress-${{ github.ref }}
@@ -21,7 +23,7 @@ concurrency:
 
 jobs:
   stress:
-    runs-on: windows-2022
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: 90
     defaults:
       run:
@@ -100,6 +102,7 @@ jobs:
           $lines | Write-Output
           $results = @{}
           Get-Content results.txt | ForEach-Object { $k, $v = $_ -split "="; $results[$k] = [int64]$v }
+          if ($results.Values -contains 3) { throw "INCONCLUSIVE: DirectML did not run on this runner" }
           # The fixed configuration must pass; the unlocked ones are the experiment.
           if ($results["A2"] -ne 0 -or $results["B2"] -ne 0) { throw "Fixed configuration failed" }
 
