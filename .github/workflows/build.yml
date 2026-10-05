@@ -93,16 +93,25 @@ jobs:
           $p = Start-Process -FilePath "dist\$name\$name.exe" -ArgumentList '--selftest' -Wait -PassThru
           Get-Content "$env:FACEFORGE_HOME\logs\faceforge.log" -ErrorAction SilentlyContinue
           if ($p.ExitCode -ne 0) { throw "Selftest failed with exit code $($p.ExitCode)" }
+          # The GPU diagnostic re-launches the exe per case; prove a crashing case is captured.
+          $log = "$env:RUNNER_TEMP\diag-crash.log"
+          $d = Start-Process -FilePath "dist\$name\$name.exe" -ArgumentList "--diagnose-case _crash --diagnose-video none --diagnose-out `"$log`"" -Wait -PassThru
+          if ($d.ExitCode -eq 0) { throw "Diagnostic crash case did not crash" }
+          if (-not (Select-String -Path $log -Pattern "Fatal Python error" -Quiet)) { throw "Crash trace not captured in $log" }
 
       - name: Selftest (macOS)
         if: runner.os == 'macOS'
         run: |
           FACEFORGE_HOME="$RUNNER_TEMP/ff-home" "dist/FaceForge Pro.app/Contents/MacOS/FaceForge Pro" --selftest
+          if "dist/FaceForge Pro.app/Contents/MacOS/FaceForge Pro" --diagnose-case _crash --diagnose-video none --diagnose-out "$RUNNER_TEMP/diag.log"; then exit 1; fi
+          grep -q "Fatal Python error" "$RUNNER_TEMP/diag.log"
 
       - name: Selftest (Linux)
         if: runner.os == 'Linux'
         run: |
           FACEFORGE_HOME="$RUNNER_TEMP/ff-home" "dist/FaceForge Pro/FaceForge Pro" --selftest
+          if "dist/FaceForge Pro/FaceForge Pro" --diagnose-case _crash --diagnose-video none --diagnose-out "$RUNNER_TEMP/diag.log"; then exit 1; fi
+          grep -q "Fatal Python error" "$RUNNER_TEMP/diag.log"
 
       # GitHub release assets must be < 2 GB, and the CUDA builds bundle
       # ~2 GB of CUDA/cuDNN libraries: compress hard and split if still too big.
