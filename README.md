@@ -66,9 +66,15 @@ or from **Releases** for tagged versions:
 | File | For |
 |---|---|
 | `FaceForge-Lite-Windows-x64.zip` | Windows laptops / older GPUs (DirectML) |
-| `FaceForge-Pro-Windows-x64-CUDA.zip` | Windows + NVIDIA RTX 20xx or newer |
+| `FaceForge-Pro-Windows-x64-CUDA.7z` | Windows + NVIDIA RTX 20xx or newer (open with 7-Zip) |
 | `FaceForge-Pro-macOS-AppleSilicon.dmg` | macOS 12+ on Apple Silicon |
-| `FaceForge-Pro-Linux-x64-CUDA.tar.gz` | Linux + NVIDIA RTX 20xx or newer |
+| `FaceForge-Pro-Linux-x64-CUDA.tar.xz` | Linux + NVIDIA RTX 20xx or newer |
+
+The CUDA builds include about 2 GB of NVIDIA libraries. If an archive would
+be larger than GitHub's 2 GB file limit, it is split into numbered parts
+(`.7z.001`, `.002`… or `.tar.xz.000`, `.001`…). Download all parts:
+7-Zip opens the first `.7z` part directly, and on Linux run
+`cat *.tar.xz.* | tar -xJ`.
 
 To run a build:
 

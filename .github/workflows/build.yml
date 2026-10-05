@@ -48,7 +48,7 @@ jobs:
             edition: pro
             backend: cuda
           - name: FaceForge-Pro-macOS-AppleSilicon
-            os: macos-14
+            os: macos-latest
             edition: pro
             backend: cpu
           - name: FaceForge-Pro-Linux-x64-CUDA
@@ -104,12 +104,22 @@ jobs:
         run: |
           FACEFORGE_HOME="$RUNNER_TEMP/ff-home" "dist/FaceForge Pro/FaceForge Pro" --selftest
 
+      # GitHub release assets must be < 2 GB, and the CUDA builds bundle
+      # ~2 GB of CUDA/cuDNN libraries: compress hard and split if still too big.
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $name = if ($env:FACEFORGE_EDITION -eq 'lite') { 'FaceForge Lite' } else { 'FaceForge Pro' }
-          7z a -tzip -mx=5 "${{ matrix.name }}.zip" "./dist/$name"
+          if ($env:FACEFORGE_BACKEND -eq 'cuda') {
+            7z a -t7z -mx=9 -mmt=on -v1900m "${{ matrix.name }}.7z" "./dist/$name"
+            if ((Get-ChildItem "${{ matrix.name }}.7z.*").Count -eq 1) {
+              Rename-Item "${{ matrix.name }}.7z.001" "${{ matrix.name }}.7z"
+            }
+          } else {
+            7z a -tzip -mx=5 "${{ matrix.name }}.zip" "./dist/$name"
+          }
+          Get-ChildItem "${{ matrix.name }}.*" | Format-Table Name, Length
 
       - name: Package (macOS)
         if: runner.os == 'macOS'
@@ -120,15 +130,19 @@ jobs:
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
-        run: tar -C dist -czf "${{ matrix.name }}.tar.gz" "FaceForge Pro"
+        run: |
+          XZ_OPT="-9 -T0" tar -C dist -cJf "${{ matrix.name }}.tar.xz" "FaceForge Pro"
+          if [ "$(stat -c %s "${{ matrix.name }}.tar.xz")" -gt 1992294400 ]; then
+            split -b 1900m -d -a 3 "${{ matrix.name }}.tar.xz" "${{ matrix.name }}.tar.xz."
+            rm "${{ matrix.name }}.tar.xz"
+          fi
+          ls -la "${{ matrix.name }}".*
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
-          path: |
-            ${{ matrix.name }}.zip
-            ${{ matrix.name }}.dmg
-            ${{ matrix.name }}.tar.gz
+          path: ${{ matrix.name }}.*
+          compression-level: 0  # already compressed
           if-no-files-found: error
           retention-days: 14
 
