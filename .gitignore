@@ -40,6 +40,10 @@ last_workspace.json
 tensorrt-engines/
 
 # Temp & output
+output/
+logs/
+*.part
+*.emap.npy
 Swap_Out/
 .thumbnails/
 .jobs/

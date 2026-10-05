@@ -1,17 +1,11 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="faceforge",
-    version="1.0.0",
-    description="FaceForge — Open-source AI Face Swap & Enhancement Tool",
-    author="Your Name",
-    packages=find_packages(),
-    install_requires=[
-        # Dependencies are managed in requirements.txt
-    ],
-    entry_points={
-        "console_scripts": [
-            "faceforge=run:main",
-        ],
-    },
+    version="2.0.0",
+    description="FaceForge — AI face swap & restoration studio",
+    packages=find_packages(exclude=("tests",)),
+    py_modules=["run"],
+    python_requires=">=3.10",
+    entry_points={"gui_scripts": ["faceforge=run:main"]},
 )

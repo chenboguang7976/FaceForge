@@ -1,166 +1,151 @@
-"""Settings and configuration management for FaceForge.
+"""Settings persisted as JSON in the data folder (see ``helpers.paths``)."""
+from __future__ import annotations
 
-Provides a centralized settings manager that persists to JSON
-and supplies defaults for all configurable parameters.
-"""
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
+from faceforge.helpers.logger import get_logger
+from faceforge.helpers.paths import default_models_dir, default_output_dir, settings_file
 
-# Default settings with English keys
-DEFAULT_SETTINGS = {
-    # --- Device & Performance ---
-    "device": "cuda",                    # "cuda" or "cpu"
-    "max_threads": 4,
-    "max_memory_gb": 16,                 # Max RAM usage
-    "vram_strategy": "strict",           # "strict" or "balanced"
+log = get_logger(__name__)
+
+SETTINGS_VERSION = 2
+
+DEFAULT_SETTINGS: dict[str, Any] = {
+    "settings_version": SETTINGS_VERSION,
+    "first_run_done": False,
+
+    # --- Device & performance ---
+    "device": "auto",                  # auto | cuda | directml | coreml | cpu
+    "gpu_device_id": 0,
+    "execution_workers": 2,
+    "max_loaded_models": 3,
+    "performance_profile": "low",      # informational, from hardware detection
+
+    # --- Quality preset ---
+    "preset": "performance",           # performance | balanced | quality | maximum | custom
+
+    # --- Face detection ---
+    "face_detector_model": "scrfd",    # scrfd | retinaface | yoloface
+    "face_detector_size": 640,
+    "face_detector_score": 0.5,
+
+    # --- Face selection ---
+    "face_selector_mode": "all",       # all | largest | reference
+    "reference_face_distance": 0.6,
+
+    # --- Face swap ---
+    "face_swap_enabled": True,
+    "face_swapper_model": "inswapper_128",
+    "face_swapper_pixel_boost": 128,
+    "face_color_match": False,
+
+    # --- Mask ---
+    "face_mask_blur": 0.3,
+    "face_mask_padding": [0, 0, 0, 0],  # top, right, bottom, left (%)
+    "face_mask_occlusion": False,
+    "face_mask_region": False,
+
+    # --- Face enhancement ---
+    "face_enhancer_enabled": False,
+    "face_enhancer_model": "gpen_bfr_256",
+    "face_enhancer_blend": 80,
+    "codeformer_fidelity": 0.7,
 
     # --- Output ---
-    "output_quality": 80,                # JPEG quality 1-100
     "output_folder": "",
-    "keep_fps": True,
+    "output_image_format": "png",      # png | jpg | webp
+    "output_image_quality": 95,
+    "output_video_quality": 80,
+    "output_video_encoder": "auto",    # auto | libx264 | h264_nvenc | h264_qsv | h264_amf | h264_videotoolbox
     "keep_audio": True,
-    "temp_frame_format": "jpg",
-    "temp_frame_quality": 100,
 
-    # --- Face Detection ---
-    "face_detector": "RetinaFace",       # RetinaFace, SCRFD, Yolov8, Yunet
-    "face_detect_size": "640x640",
-    "face_detect_score": 0.5,
-    "face_sort_order": "left-right",     # left-right, right-left, top-bottom, etc.
-    "face_filter_age": "any",
-    "face_filter_gender": "any",
-
-    # --- Face Swap ---
-    "face_swapper_model": "Inswapper128",
-    "face_swap_mode": "all",             # "all" or "selected"
-    "face_swapper_pixel_boost": "256x256",
-    "reference_face_distance": 0.3,
-
-    # --- Face Enhancement ---
-    "face_enhancer_model": "GFPGAN 1.4",
-    "face_enhancer_blend": 80,           # Blend % with original
-
-    # --- Face Editing ---
-    "face_editor_eyebrow": 0.0,
-    "face_editor_eye_gaze_h": 0.0,
-    "face_editor_eye_gaze_v": 0.0,
-    "face_editor_eye_open": 0.0,
-    "face_editor_lip_open": 0.0,
-    "face_editor_mouth_grim": 0.0,
-    "face_editor_mouth_pout": 0.0,
-    "face_editor_mouth_purse": 0.0,
-    "face_editor_mouth_smile": 0.0,
-    "face_editor_mouth_pos_h": 0.0,
-    "face_editor_mouth_pos_v": 0.0,
-    "face_editor_head_pitch": 0.0,
-    "face_editor_head_yaw": 0.0,
-    "face_editor_head_roll": 0.0,
-    "age_modifier_direction": 0,
-    "expression_restorer_factor": 100,
-
-    # --- Frame Enhancement ---
-    "frame_enhancer_model": "SPAN x4",
-    "frame_enhancer_blend": 80,
-
-    # --- Colorization ---
-    "colorizer_model": "DDColor",
-    "colorizer_blend": 100,
-
-    # --- Face Mask ---
-    "mask_type": "box",                  # "box", "occlusion", "region"
-    "mask_blur": 30,
-    "mask_padding_top": 0,
-    "mask_padding_bottom": 0,
-    "mask_padding_left": 0,
-    "mask_padding_right": 0,
-
-    # --- Lip Sync ---
-    "lip_syncer_model": "Wav2Lip-GAN",
-
-    # --- Live / Webcam ---
-    "webcam_device": "0",
-    "webcam_resolution": "960x540",
-    "webcam_fps": 25,
+    # --- Paths ---
+    "models_dir": "",
 
     # --- UI ---
-    "theme": "dark",
-    "window_width": 1376,
-    "window_height": 768,
-    "show_parameters_panel": True,
-    "show_faces_panel": True,
-    "show_media_panel": True,
-
-    # --- Misc ---
-    "auto_shutdown": False,
-    "open_output_folder": False,
-
-    # --- Source / Target paths (session) ---
-    "source_face_path": "",
-    "target_media_path": "",
+    "language": "en",                  # en | zh | vi
+    "theme": "dark",                   # dark | light
+    "window_geometry": "",
+    "splitter_state": "",
+    "last_open_dir": "",
 }
 
 
 class Settings:
-    """Manages application settings with JSON persistence.
+    """Dict-like settings with defaults and atomic JSON persistence."""
 
-    Settings are loaded from 'settings.json' in the application directory.
-    If the file doesn't exist, defaults are used and saved on first write.
-    """
-
-    def __init__(self, settings_file: str = "settings.json"):
-        self._file = Path(settings_file)
-        self._data: dict = {}
-        self._defaults = DEFAULT_SETTINGS.copy()
+    def __init__(self, path: str | Path | None = None):
+        self._file = Path(path) if path else settings_file()
+        self._data: dict[str, Any] = dict(DEFAULT_SETTINGS)
+        self.is_new = not self._file.exists()
         self._load()
 
-    def _load(self):
-        """Load settings from file, falling back to defaults."""
-        if self._file.exists():
-            try:
-                with open(self._file, "r", encoding="utf-8") as f:
-                    saved = json.load(f)
-                # Merge: defaults as base, override with saved values
-                self._data = {**self._defaults, **saved}
-            except (json.JSONDecodeError, OSError):
-                self._data = self._defaults.copy()
-        else:
-            self._data = self._defaults.copy()
-
-    def save(self):
-        """Persist current settings to file."""
+    def _load(self) -> None:
+        if self.is_new:
+            return
         try:
-            with open(self._file, "w", encoding="utf-8") as f:
-                json.dump(self._data, f, indent=4, ensure_ascii=False)
-        except OSError as e:
-            print(f"[Settings] Failed to save: {e}")
+            with open(self._file, encoding="utf-8") as f:
+                saved = json.load(f)
+        except (OSError, json.JSONDecodeError) as exc:
+            log.warning("Settings unreadable (%s); using defaults.", exc)
+            self.is_new = True
+            return
+        if saved.get("settings_version") != SETTINGS_VERSION:
+            # v1 used different keys/values; only carry over what still means the same thing.
+            log.info("Migrating settings from version %s", saved.get("settings_version"))
+            saved = {k: saved[k] for k in ("language", "theme", "output_folder") if k in saved}
+            saved["settings_version"] = SETTINGS_VERSION
+        for key, value in saved.items():
+            if key in DEFAULT_SETTINGS:
+                self._data[key] = value
+
+    def save(self) -> None:
+        """Write via a temp file + rename so a crash never leaves a corrupt file."""
+        try:
+            self._file.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=self._file.parent, prefix=".settings", suffix=".tmp")
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(self._data, f, indent=2, ensure_ascii=False)
+            os.replace(tmp, self._file)
+        except OSError as exc:
+            log.error("Failed to save settings: %s", exc)
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Get a setting value."""
-        return self._data.get(key, default)
+        return self._data.get(key, DEFAULT_SETTINGS.get(key, default))
 
-    def set(self, key: str, value: Any):
-        """Set a setting value (does not auto-save)."""
+    def set(self, key: str, value: Any) -> None:
         self._data[key] = value
 
-    def get_all(self) -> dict:
-        """Return a copy of all settings."""
-        return self._data.copy()
+    def update(self, values: dict[str, Any]) -> None:
+        self._data.update(values)
 
-    def reset(self, key: str = None):
-        """Reset a specific key or all settings to defaults."""
+    def reset(self, key: str | None = None) -> None:
         if key:
-            self._data[key] = self._defaults.get(key)
+            self._data[key] = DEFAULT_SETTINGS.get(key)
         else:
-            self._data = self._defaults.copy()
+            self._data = dict(DEFAULT_SETTINGS)
+
+    def as_dict(self) -> dict[str, Any]:
+        return dict(self._data)
+
+    # Resolved paths ------------------------------------------------------
+    @property
+    def models_dir(self) -> Path:
+        return Path(self.get("models_dir") or default_models_dir())
+
+    @property
+    def output_dir(self) -> Path:
+        return Path(self.get("output_folder") or default_output_dir())
 
     def __getitem__(self, key: str) -> Any:
-        return self._data[key]
+        return self.get(key)
 
-    def __setitem__(self, key: str, value: Any):
-        self._data[key] = value
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.set(key, value)
 
     def __contains__(self, key: str) -> bool:
         return key in self._data
