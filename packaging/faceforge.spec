@@ -65,13 +65,14 @@ a = Analysis(
     excludes=EXCLUDES,
     noarchive=False,
 )
-# Swap in our OpenCV loader config (see packaging/cv2_config.py).
+# Swap in our OpenCV loader config (see packaging/cv2_config.py); config-3.py is
+# the file that sets PYTHON_EXTENSIONS_PATHS.
 def _is_cv2_config(entry):
-    return entry[0].replace("\\", "/") == "cv2/config.py"
+    return entry[0].replace("\\", "/") == "cv2/config-3.py"
 
 
 a.datas = [e for e in a.datas if not _is_cv2_config(e)]
-a.datas.append(("cv2/config.py", str(ROOT / "packaging" / "cv2_config.py"), "DATA"))
+a.datas.append(("cv2/config-3.py", str(ROOT / "packaging" / "cv2_config.py"), "DATA"))
 
 pyz = PYZ(a.pure)
 
