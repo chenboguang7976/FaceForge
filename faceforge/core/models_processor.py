@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import gc
+import os
 import threading
 from collections import OrderedDict
 from pathlib import Path
@@ -65,6 +66,8 @@ class ModelsProcessor:
         # once (native crash seen on a GTX 1050 during video jobs); GPU calls
         # are serialized, CPU pre/post-processing still runs in parallel.
         self._gpu_run_lock = threading.Lock()
+        # Diagnostics only (CI stress test A/B): FACEFORGE_DML_SERIALIZE=0 disables it.
+        self.serialize_gpu = os.environ.get("FACEFORGE_DML_SERIALIZE", "1") != "0"
         self._cuda_dlls_loaded = False
         self.on_warning: Callable[[str], None] | None = None
         self.on_loading: Callable[[str, bool], None] | None = None
@@ -267,7 +270,7 @@ class ModelsProcessor:
             dtype = _ORT_TYPES.get(meta.type, np.float32)
             value = np.asarray(feeds[meta.name])
             typed[meta.name] = value if value.dtype == dtype else value.astype(dtype)
-        if self._session_device.get(key) in ("directml", "coreml"):
+        if self.serialize_gpu and self._session_device.get(key) in ("directml", "coreml"):
             with self._gpu_run_lock:
                 outputs = sess.run(None, typed)
         else:

@@ -1,0 +1,113 @@
+name: DirectML stress (A/B)
+
+# Reproduces GPU-path bugs on a Windows runner without a GPU: DirectML runs on
+# the WARP software adapter, so the same DirectML code paths as on a user's
+# GTX/Radeon/Intel GPU are exercised. Each case runs in its own process so a
+# native crash in one case doesn't hide the others.
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths:
+      - "faceforge/core/**"
+      - "faceforge/processors/**"
+      - "tests/stress/**"
+      - ".github/workflows/dml-stress.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: dml-stress-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stress:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      FACEFORGE_HOME: ${{ github.workspace }}\ff-home
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies (DirectML)
+        run: pip install -r requirements/directml.txt
+
+      - name: Cache models
+        uses: actions/cache@v4
+        with:
+          path: stress-models
+          key: stress-models-v1
+
+      - name: Download models and test image
+        run: |
+          New-Item -ItemType Directory -Force stress-models | Out-Null
+          $base = "https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0"
+          foreach ($f in "retinaface_10g.onnx", "arcface_w600k_r50.onnx", "inswapper_128.onnx", "gpen_bfr_256.onnx") {
+            if (-not (Test-Path "stress-models/$f")) { curl.exe -sSL -o "stress-models/$f" "$base/$f" }
+          }
+          curl.exe -sSL -o stress-models/t1.jpg https://raw.githubusercontent.com/deepinsight/insightface/master/python-package/insightface/data/images/t1.jpg
+          Get-ChildItem stress-models | Format-Table Name, Length
+
+      - name: "A1 raw: 4 threads, one DirectML session, NO lock"
+        timeout-minutes: 15
+        run: |
+          python tests/stress/dml_stress.py raw --models stress-models --threads 4 --runs 25 2>&1 | Tee-Object a1.log
+          "A1=$LASTEXITCODE" | Add-Content results.txt
+          exit 0
+
+      - name: "A2 raw: 4 threads, one DirectML session, WITH lock"
+        timeout-minutes: 15
+        run: |
+          python tests/stress/dml_stress.py raw --models stress-models --threads 4 --runs 25 --lock 2>&1 | Tee-Object a2.log
+          "A2=$LASTEXITCODE" | Add-Content results.txt
+          exit 0
+
+      - name: "B1 video pipeline (Balanced, 2 workers), lock OFF = old build"
+        timeout-minutes: 30
+        env:
+          FACEFORGE_DML_SERIALIZE: "0"
+        run: |
+          python tests/stress/dml_stress.py pipeline --models stress-models --image stress-models/t1.jpg --workdir b1 2>&1 | Tee-Object b1.log
+          "B1=$LASTEXITCODE" | Add-Content results.txt
+          exit 0
+
+      - name: "B2 video pipeline (Balanced, 2 workers), lock ON = fixed build"
+        timeout-minutes: 30
+        env:
+          FACEFORGE_DML_SERIALIZE: "1"
+        run: |
+          python tests/stress/dml_stress.py pipeline --models stress-models --image stress-models/t1.jpg --workdir b2 2>&1 | Tee-Object b2.log
+          "B2=$LASTEXITCODE" | Add-Content results.txt
+          exit 0
+
+      - name: Summary
+        if: always()
+        run: |
+          $lines = @("| Case | Exit code | Result line |", "|---|---|---|")
+          foreach ($entry in (Get-Content results.txt)) {
+            $case, $code = $entry -split "="
+            $log = "$($case.ToLower()).log"
+            $result = (Select-String -Path $log -Pattern "^RESULT" -ErrorAction SilentlyContinue | Select-Object -Last 1).Line
+            if (-not $result) { $result = "(no RESULT line - crashed or timed out)" }
+            $lines += "| $case | $code | $result |"
+          }
+          $lines | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          $lines | Write-Output
+          $results = @{}
+          Get-Content results.txt | ForEach-Object { $k, $v = $_ -split "="; $results[$k] = [int64]$v }
+          # The fixed configuration must pass; the unlocked ones are the experiment.
+          if ($results["A2"] -ne 0 -or $results["B2"] -ne 0) { throw "Fixed configuration failed" }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dml-stress-logs
+          path: |
+            *.log
+            ff-home/logs/**
+          retention-days: 14
