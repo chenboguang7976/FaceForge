@@ -154,6 +154,15 @@ def _video(mp, video: str, encoder: str) -> dict:
             "encoder": encoder, "workers": mp.workers}
 
 
+def diagnostic_device(hardware) -> str | None:
+    """The GPU backend to test, independent of the user's current device setting
+    (a run on 2026-10-06 tested CPU only because the app was set to CPU)."""
+    from faceforge.core.hardware import resolve_device
+
+    device = resolve_device("auto", hardware)
+    return None if device == "cpu" else device
+
+
 # ----------------------------------------------------------------- orchestrator
 def run_all(video: str, device: str, report_path: Path,
             progress: Callable[[str], None] | None = None, timeout: int = 900,
@@ -163,7 +172,10 @@ def run_all(video: str, device: str, report_path: Path,
     else:
         base_cmd = [sys.executable, str(Path(__file__).resolve().parent.parent / "run.py")]
     lines = [f"FaceForge GPU diagnostic — {time.strftime('%Y-%m-%d %H:%M:%S')}",
-             f"video: {video}", f"device: {device}", ""]
+             f"video: {video}", f"device: {device}"]
+    if device == "cpu":
+        lines.append("WARNING: device is CPU, so this is NOT a GPU test.")
+    lines.append("")
     for case, description in cases or CASES:
         if progress:
             progress(case)

@@ -396,6 +396,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
               "tổng cộng 10–30 phút). Mỗi phép chạy trong tiến trình riêng nên dù có crash cũng không làm "
               "đóng FaceForge.\n\nBáo cáo được lưu trong thư mục logs và tự mở khi xong. Tiếp tục?",
     },
+    "diagnose.no_gpu": {
+        "en": "No usable GPU backend was found, so there is nothing to diagnose.",
+        "zh": "未找到可用的 GPU 后端，无法进行诊断。",
+        "vi": "Không tìm thấy GPU dùng được nên không có gì để chẩn đoán.",
+    },
     "diagnose.running": {"en": "Diagnosing: {case}…", "zh": "诊断中：{case}…", "vi": "Đang chẩn đoán: {case}…"},
     "diagnose.done": {"en": "Diagnostic report saved: {path}", "zh": "诊断报告已保存：{path}",
                       "vi": "Đã lưu báo cáo chẩn đoán: {path}"},

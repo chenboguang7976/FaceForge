@@ -129,6 +129,15 @@ class Controller(QObject):
         if key in PRESET_KEYS and self.settings.get("preset") != PRESET_CUSTOM:
             self.settings.set("preset", PRESET_CUSTOM)
             self.settings_applied.emit()
+        if key == "device":
+            # Parallel frames depend on the device: on a 4-thread CPU, 2 workers measured
+            # slower than 1 (637 s vs 475 s for 90 frames of 1080p), on a GPU 2 help.
+            from faceforge.core.hardware import resolve_device
+
+            resolved = resolve_device(value, self.hardware)
+            self.settings.set("execution_workers",
+                              runtime_settings(self.hardware, resolved)["execution_workers"])
+            self.settings_applied.emit()
         if key in ("device", "execution_workers", "max_loaded_models", "gpu_device_id"):
             self.apply_runtime()
         if key in ("face_detector_model", "face_detector_size", "face_detector_score"):

@@ -347,8 +347,13 @@ class SettingsPanel(QWidget):
         if missing:
             self.c.models_missing.emit(missing)
             return
+        from faceforge.diagnose import diagnostic_device
+
+        device = diagnostic_device(self.c.hardware)  # always the GPU, whatever is selected above
+        if device is None:
+            self.c.message.emit("diagnose.no_gpu", "warning")
+            return
         report = logs_dir() / f"diagnose-{time.strftime('%Y%m%d-%H%M%S')}.txt"
-        device = self.c.models.device
         self.diagnose_btn.setEnabled(False)
 
         def progress(case: str) -> None:
