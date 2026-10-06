@@ -200,8 +200,6 @@ class VideoJob:
     keep_audio: bool = True
     workers: int = 2
     low_end: bool = False
-    max_frames: int | None = None  # diagnostics: stop after this many frames
-    resume: bool = True            # diagnostics: never reuse segments from another run
 
     def fingerprint(self) -> str:
         """Identifies 'the same work' for resuming: input file, settings and identities."""
@@ -209,7 +207,7 @@ class VideoJob:
         stat = src.stat()
         h = hashlib.sha1()
         h.update(f"{src.resolve()}|{stat.st_size}|{stat.st_mtime_ns}|{self.options!r}|"
-                 f"{self.encoder}|{self.quality}|{self.max_frames}".encode())
+                 f"{self.encoder}|{self.quality}".encode())
         for emb in (self.context.source_embedding, self.context.reference_embedding):
             if emb is not None:
                 h.update(np.round(emb, 4).tobytes())
@@ -241,12 +239,7 @@ class VideoProcessor:
         log.info("Video %dx%d @ %.2f fps, %d frames, encoder %s", info.width, info.height,
                  info.fps, info.frame_count, encoder)
 
-        if job.resume:
-            job_dir = temp_dir() / "jobs" / job.fingerprint()
-        else:
-            import uuid
-
-            job_dir = temp_dir() / "jobs" / f"fresh-{uuid.uuid4().hex[:12]}"
+        job_dir = temp_dir() / "jobs" / job.fingerprint()
         job_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = job_dir / "manifest.json"
         manifest = {"done": []}
@@ -311,8 +304,6 @@ class VideoProcessor:
             with ThreadPoolExecutor(max_workers=max(1, job.workers),
                                     thread_name_prefix="ff-frame") as pool:
                 for frame in iter_frames(job.input_path, info, start_frame):
-                    if job.max_frames is not None and frame_index >= job.max_frames:
-                        break
                     while pause is not None and pause.is_set():
                         if cancel is not None and cancel.is_set():
                             break

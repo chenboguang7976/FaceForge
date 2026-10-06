@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import gc
-import os
 import threading
 from collections import OrderedDict
 from pathlib import Path
@@ -72,14 +71,12 @@ class ModelsProcessor:
         self._pinned: set[str] = set()
         self.fallbacks: dict[str, str] = {}   # model key -> device actually used, when not self.device
         # DirectML/CoreML sessions are not safe to Run from several threads at
-        # once. Measured on a GTX 1050 (GPU diagnostic, 2026-10-06): unlocked
+        # once. Measured on a GTX 1050 (2026-10-06): unlocked
         # concurrent runs -> 8/100 failed calls and an access violation
         # (0xC0000005) in a 2-worker video job; serialized -> 100/100 and the
         # same job completes, slightly faster than 1 worker (74.5s vs 81.1s).
         # CPU pre/post-processing still runs in parallel.
         self._gpu_run_lock = threading.Lock()
-        # Diagnostics only (the in-app GPU diagnostic A/B): FACEFORGE_DML_SERIALIZE=0 disables it.
-        self.serialize_gpu = os.environ.get("FACEFORGE_DML_SERIALIZE", "1") != "0"
         self._cuda_dlls_loaded = False
         self.on_warning: Callable[[str], None] | None = None
         self.on_loading: Callable[[str, bool], None] | None = None
@@ -298,7 +295,7 @@ class ModelsProcessor:
             dtype = _ORT_TYPES.get(meta.type, np.float32)
             value = np.asarray(feeds[meta.name])
             typed[meta.name] = value if value.dtype == dtype else value.astype(dtype)
-        if self.serialize_gpu and self._session_device.get(key) in ("directml", "coreml"):
+        if self._session_device.get(key) in ("directml", "coreml"):
             with self._gpu_run_lock:
                 outputs = sess.run(None, typed)
         else:

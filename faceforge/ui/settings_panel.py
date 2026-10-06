@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import threading
-import time
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QButtonGroup, QFileDialog, QGridLayout, QHBoxLayout, QLabel,
@@ -310,9 +309,6 @@ class SettingsPanel(QWidget):
         row.addWidget(recommended, 1)
         row.addWidget(manager, 1)
         sec.add(buttons)
-        self.diagnose_btn = Button("diagnose.button", icon_name="gauge")
-        self.diagnose_btn.clicked.connect(self._diagnose)
-        sec.add(self.diagnose_btn)
 
         self.active_label = QLabel()
         self.active_label.setWordWrap(True)
@@ -325,57 +321,6 @@ class SettingsPanel(QWidget):
         i18n.bind(self.active_label, self._refresh_device_text)
         self.c.runtime_changed.connect(self._refresh_device_text)
         self.c.model_loading.connect(lambda _key, on: None if on else self._refresh_device_text())
-
-    def _diagnose(self) -> None:
-        """Run the GPU A/B diagnostic on this machine (see faceforge/diagnose.py)."""
-        from PySide6.QtWidgets import QMessageBox
-
-        from faceforge.diagnose import run_all
-        from faceforge.helpers.image_io import VIDEO_EXTENSIONS
-        from faceforge.helpers.paths import logs_dir
-
-        if self.c.is_busy():
-            return
-        if QMessageBox.question(self, tr("diagnose.title"), tr("diagnose.intro")) != QMessageBox.StandardButton.Yes:
-            return
-        pattern = "*" + " *".join(sorted(VIDEO_EXTENSIONS))
-        video, _ = QFileDialog.getOpenFileName(self, tr("diagnose.title"), self.s.get("last_open_dir"),
-                                               f"{tr('filter.videos')} ({pattern})")
-        if not video:
-            return
-        missing = self.c.models.missing(["retinaface", "arcface_w600k_r50", "inswapper_128", "gpen_bfr_256"])
-        if missing:
-            self.c.models_missing.emit(missing)
-            return
-        from faceforge.diagnose import diagnostic_device
-
-        device = diagnostic_device(self.c.hardware)  # always the GPU, whatever is selected above
-        if device is None:
-            self.c.message.emit("diagnose.no_gpu", "warning")
-            return
-        report = logs_dir() / f"diagnose-{time.strftime('%Y%m%d-%H%M%S')}.txt"
-        self.diagnose_btn.setEnabled(False)
-
-        def progress(case: str) -> None:
-            self.c._deliver(lambda _: self.diagnose_btn.setText(tr("diagnose.running", case=case)), None)
-
-        def work() -> None:
-            try:
-                run_all(video, device, report, progress)
-                self.c._deliver(self._diagnose_done, str(report))
-            except Exception as exc:  # noqa: BLE001
-                self.c._deliver(lambda e: self._diagnose_done(None, e), str(exc))
-
-        threading.Thread(target=work, daemon=True, name="ff-diagnose").start()
-
-    def _diagnose_done(self, report: str | None, error: str = "") -> None:
-        self.diagnose_btn.setEnabled(True)
-        self.diagnose_btn.setText(tr("diagnose.button"))
-        if report:
-            self.c.message.emit(tr("diagnose.done", path=report), "success")
-            self.c.open_path(report)
-        else:
-            self.c.message.emit(error, "error")
 
     def _refresh_device_text(self) -> None:
         models = self.c.models

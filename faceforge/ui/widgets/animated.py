@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import (Property, QEasingCurve, QPointF, QPropertyAnimation, QRectF, QSize,
                             Qt, Signal)
-from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QAbstractButton, QProgressBar, QSizePolicy, QWidget
 
 from faceforge.ui import icons
@@ -221,6 +221,13 @@ class Tile(QAbstractButton, _Animated):
         self._animate("hover", 0.0)
         super().leaveEvent(e)
 
+    @staticmethod
+    def _fit(font, text: str, available: float) -> float:
+        font = QFont(font)
+        while QFontMetrics(font).horizontalAdvance(text) > available and font.pointSizeF() > 7.5:
+            font.setPointSizeF(font.pointSizeF() - 0.25)
+        return font.pointSizeF()
+
     def paintEvent(self, _event) -> None:
         t = theme.tokens
         p = QPainter(self)
@@ -237,10 +244,12 @@ class Tile(QAbstractButton, _Animated):
         p.drawPixmap(QPointF(r.center().x() - 10, r.top() + 12), icons.pixmap(self.icon_name, icon_color.name(), 20))
         font = self.font()
         font.setWeight(font.Weight.DemiBold)
-        # Shrink long labels (e.g. "Chất lượng") rather than clipping them.
+        # Shrink long labels (e.g. "Chất lượng") rather than clipping them, and
+        # use one size for the whole row so neighbouring tiles stay consistent.
         available = r.width() - 8
-        while QFontMetrics(font).horizontalAdvance(self.text()) > available and font.pointSizeF() > 7.5:
-            font.setPointSizeF(font.pointSizeF() - 0.25)
+        siblings = [w for w in (self.parentWidget().findChildren(Tile) if self.parentWidget() else [])
+                    if w.parentWidget() is self.parentWidget()] or [self]
+        font.setPointSizeF(min(self._fit(font, w.text(), available) for w in siblings))
         p.setFont(font)
         p.setPen(fg)
         p.drawText(QRectF(r.left() + 4, r.top() + 36, available, 20),
