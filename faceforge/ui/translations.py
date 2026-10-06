@@ -349,6 +349,13 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "zh": "误检时调高，漏检时调低。",
         "vi": "Tăng nếu nhận nhầm, giảm nếu bỏ sót khuôn mặt.",
     },
+    "detect.landmarker": {"en": "Precise alignment (68 points)", "zh": "精确对齐（68 点）",
+                          "vi": "Căn mặt chính xác (68 điểm)"},
+    "detect.landmarker.hint": {
+        "en": "Steadier on turned faces and in video (less drifting). Slightly slower; downloads 2DFAN4 (93 MB).",
+        "zh": "侧脸和视频中更稳定（减少漂移）。速度略慢，需下载 2DFAN4（93 MB）。",
+        "vi": "Ổn định hơn với mặt nghiêng và video (bớt trôi). Chậm hơn chút; cần tải 2DFAN4 (93 MB).",
+    },
     # ------------------------------------------------------------- output
     "output.title": {"en": "Output", "zh": "输出", "vi": "Xuất file"},
     "output.folder": {"en": "Output folder", "zh": "输出文件夹", "vi": "Thư mục lưu"},
@@ -425,6 +432,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "models.col.size": {"en": "Size", "zh": "大小", "vi": "Dung lượng"},
     "models.col.status": {"en": "Status", "zh": "状态", "vi": "Trạng thái"},
     "models.cat.detector": {"en": "Detection", "zh": "检测", "vi": "Phát hiện"},
+    "models.cat.landmarker": {"en": "Landmarks", "zh": "关键点", "vi": "Điểm mốc"},
     "models.cat.recognizer": {"en": "Recognition", "zh": "识别", "vi": "Nhận dạng"},
     "models.cat.swapper": {"en": "Face swap", "zh": "换脸", "vi": "Hoán đổi"},
     "models.cat.enhancer": {"en": "Restoration", "zh": "修复", "vi": "Làm nét"},

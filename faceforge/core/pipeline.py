@@ -10,6 +10,7 @@ from faceforge.core.face import Face
 from faceforge.core.models_processor import ModelsProcessor
 from faceforge.processors.face_detector import FaceDetector
 from faceforge.processors.face_enhancer import ENHANCERS, FaceEnhancer
+from faceforge.processors.face_landmarker import LANDMARKER, FaceLandmarker
 from faceforge.processors.face_mask import OCCLUSION_MODEL, REGION_MODEL, FaceMasker
 from faceforge.processors.face_recognizer import RECOGNIZER, FaceRecognizer, average_embedding
 from faceforge.processors.face_swapper import SWAPPERS, TEMPLATE, FaceSwapper
@@ -27,6 +28,7 @@ class ProcessOptions:
     detector: str = "scrfd"
     detector_size: int = 640
     detector_score: float = 0.5
+    landmarker: bool = False
     swapper: str = "inswapper_128"
     pixel_boost: int = 128
     selector: str = SELECT_ALL
@@ -47,6 +49,7 @@ class ProcessOptions:
             detector=s.get("face_detector_model"),
             detector_size=int(s.get("face_detector_size")),
             detector_score=float(s.get("face_detector_score")),
+            landmarker=bool(s.get("face_landmarker")),
             swapper=s.get("face_swapper_model"),
             pixel_boost=int(s.get("face_swapper_pixel_boost")),
             selector=s.get("face_selector_mode"),
@@ -78,6 +81,7 @@ class FacePipeline:
     def __init__(self, models: ModelsProcessor):
         self.models = models
         self.detector = FaceDetector(models)
+        self.landmarker = FaceLandmarker(models)
         self.recognizer = FaceRecognizer(models)
         self.swapper = FaceSwapper(models)
         self.enhancer = FaceEnhancer(models)
@@ -87,6 +91,8 @@ class FacePipeline:
     @staticmethod
     def required_models(options: ProcessOptions) -> list[str]:
         keys = [options.detector]
+        if options.landmarker:
+            keys.append(LANDMARKER)
         if options.swap_enabled:
             keys += [RECOGNIZER, options.swapper]
             if options.mask_occlusion:
@@ -106,6 +112,8 @@ class FacePipeline:
     # ---------------------------------------------------------------- analysis
     def detect(self, frame: np.ndarray, options: ProcessOptions, with_embeddings: bool = False) -> list[Face]:
         faces = self.detector.detect(frame, options.detector, options.detector_size, options.detector_score)
+        if options.landmarker:
+            self.landmarker.refine(frame, faces)
         if with_embeddings:
             self.recognizer.embed_all(frame, faces)
         return faces

@@ -209,6 +209,8 @@ class SettingsPanel(QWidget):
         self.det_size.combo.currentIndexChanged.connect(lambda _: self._set("face_detector_size", self.det_size.value_of()))
         self.det_score = sec.add(SliderRow("detect.score", 10, 95, lambda v: f"{v / 100:.2f}", "detect.score.hint"))
         self.det_score.value_changed.connect(lambda v: self._set("face_detector_score", v / 100))
+        self.landmarker = sec.add(SwitchRow("detect.landmarker", "detect.landmarker.hint"))
+        self.landmarker.switch.toggled.connect(lambda v: self._set("face_landmarker", v))
 
     def _on_det_model(self) -> None:
         model = self.det_model.value_of()
@@ -370,6 +372,7 @@ class SettingsPanel(QWidget):
         self.det_size.set_value(int(s.get("face_detector_size")))
         self.det_size.setEnabled(s.get("face_detector_model") == "scrfd")
         self.det_score.set_value(round(float(s.get("face_detector_score")) * 100))
+        self.landmarker.set_value(s.get("face_landmarker"))
 
         self.out_folder.setText(str(s.output_dir))
         self.img_format.set_value(s.get("output_image_format"))

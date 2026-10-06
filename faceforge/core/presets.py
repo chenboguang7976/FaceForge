@@ -17,7 +17,8 @@ PRESETS = [PRESET_PERFORMANCE, PRESET_BALANCED, PRESET_QUALITY, PRESET_MAXIMUM]
 
 # Settings a preset controls. Anything else (paths, UI, language) is untouched.
 PRESET_KEYS = (
-    "face_detector_model", "face_detector_size", "face_swapper_model", "face_swapper_pixel_boost",
+    "face_detector_model", "face_detector_size", "face_landmarker",
+    "face_swapper_model", "face_swapper_pixel_boost",
     "face_enhancer_enabled", "face_enhancer_model", "face_enhancer_blend",
     "face_mask_occlusion", "face_mask_region", "face_mask_blur", "output_video_quality",
 )
@@ -29,6 +30,7 @@ def preset_settings(name: str, info: HardwareInfo, device: str) -> dict:
         return {
             "face_detector_model": "scrfd",
             "face_detector_size": 640 if device != "cpu" else 480,
+            "face_landmarker": False,
             "face_swapper_model": inswapper,
             "face_swapper_pixel_boost": 128,
             "face_enhancer_enabled": False,
@@ -43,6 +45,7 @@ def preset_settings(name: str, info: HardwareInfo, device: str) -> dict:
         return {
             "face_detector_model": "retinaface",
             "face_detector_size": 640,
+            "face_landmarker": True,
             "face_swapper_model": inswapper,
             "face_swapper_pixel_boost": 256,
             "face_enhancer_enabled": True,
@@ -57,6 +60,7 @@ def preset_settings(name: str, info: HardwareInfo, device: str) -> dict:
         return {
             "face_detector_model": "retinaface",
             "face_detector_size": 640,
+            "face_landmarker": True,
             "face_swapper_model": "hyperswap_1a_256",
             "face_swapper_pixel_boost": 256,
             "face_enhancer_enabled": True,
@@ -72,6 +76,7 @@ def preset_settings(name: str, info: HardwareInfo, device: str) -> dict:
     return {
         "face_detector_model": "retinaface",
         "face_detector_size": 640,
+        "face_landmarker": True,
         "face_swapper_model": "hyperswap_1a_256",
         "face_swapper_pixel_boost": 512,
         "face_enhancer_enabled": True,

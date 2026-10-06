@@ -32,6 +32,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "face_detector_model": "scrfd",    # scrfd | retinaface | yoloface
     "face_detector_size": 640,
     "face_detector_score": 0.5,
+    "face_landmarker": True,
 
     # --- Face selection ---
     "face_selector_mode": "all",       # all | largest | reference

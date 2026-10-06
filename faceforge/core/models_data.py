@@ -38,6 +38,9 @@ _MODELS = [
               16926877, "detector", "RetinaFace 10G (accurate)"),
     ModelInfo("yoloface", "yoloface_8n.onnx", _ff("models-3.0.0", "yoloface_8n.onnx"),
               12659761, "detector", "YOLOFace 8n"),
+    # --- Face landmarks (precise alignment, steadier on turned faces) ----------
+    ModelInfo("2dfan4", "2dfan4.onnx", _ff("models-3.0.0", "2dfan4.onnx"),
+              97904803, "landmarker", "2DFAN4 (68 points)"),
     # --- Face recognition (identity embedding) --------------------------------
     ModelInfo("arcface_w600k_r50", "arcface_w600k_r50.onnx",
               _ff("models-3.0.0", "arcface_w600k_r50.onnx"),

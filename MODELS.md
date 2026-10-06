@@ -13,6 +13,7 @@ before any commercial use.
 | `scrfd` | `scrfd_2.5g.onnx` | 3 MB | Face detection, fast (Lite default) |
 | `retinaface` | `retinaface_10g.onnx` | 16 MB | Face detection, accurate (Pro default) |
 | `yoloface` | `yoloface_8n.onnx` | 12 MB | Face detection, alternative |
+| `2dfan4` | `2dfan4.onnx` | 93 MB | 68-point landmarks: precise alignment, steadier on turned faces (Balanced and up) |
 | `arcface_w600k_r50` | `arcface_w600k_r50.onnx` | 166 MB | Face identity (needed for every swap) |
 | `inswapper_128` | `inswapper_128.onnx` | 530 MB | Swap, 128 px, FP32 (best on GTX 10xx and CPU) |
 | `inswapper_128_fp16` | `inswapper_128_fp16.onnx` | 265 MB | Swap, 128 px, FP16 (RTX / GTX 16xx and newer) |
@@ -32,9 +33,9 @@ before any commercial use.
 | Preset | Models | Total |
 |---|---|---:|
 | Fast | SCRFD, ArcFace, InSwapper | ≈ 0.7 GB |
-| Balanced | RetinaFace, ArcFace, InSwapper, GPEN-256 | ≈ 0.8 GB |
-| Quality | RetinaFace, ArcFace, HyperSwap 1A, GFPGAN, XSeg | ≈ 0.95 GB |
-| Maximum | Quality + BiSeNet | ≈ 1.05 GB |
+| Balanced | RetinaFace, 2DFAN4, ArcFace, InSwapper, GPEN-256 | ≈ 0.9 GB |
+| Quality | RetinaFace, 2DFAN4, ArcFace, HyperSwap 1A, GFPGAN, XSeg | ≈ 1.05 GB |
+| Maximum | Quality + BiSeNet | ≈ 1.15 GB |
 
 ## Location
 

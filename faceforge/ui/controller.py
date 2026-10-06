@@ -140,7 +140,7 @@ class Controller(QObject):
             self.settings_applied.emit()
         if key in ("device", "execution_workers", "max_loaded_models", "gpu_device_id"):
             self.apply_runtime()
-        if key in ("face_detector_model", "face_detector_size", "face_detector_score"):
+        if key in ("face_detector_model", "face_detector_size", "face_detector_score", "face_landmarker"):
             self.analyze_target()
         self.request_preview()
 

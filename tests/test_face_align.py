@@ -41,3 +41,21 @@ def test_match_color_shifts_towards_reference():
     ref = np.full((64, 64, 3), 180, np.uint8)
     out = match_color(src, ref, np.ones((64, 64), np.float32))
     assert abs(int(out.mean()) - 180) < 10
+
+
+def test_68_points_reduce_to_the_5_point_layout():
+    from faceforge.processors.face_landmarker import to_five
+
+    points = np.zeros((68, 2), np.float32)
+    points[36:42] = (10, 20)
+    points[42:48] = (30, 20)
+    points[30] = (20, 30)
+    points[48], points[54] = (12, 40), (28, 40)
+    assert np.allclose(to_five(points), [(10, 20), (30, 20), (20, 30), (12, 40), (28, 40)])
+
+
+def test_landmarker_model_is_required_only_when_enabled():
+    from faceforge.core.pipeline import FacePipeline, ProcessOptions
+
+    assert "2dfan4" in FacePipeline.required_models(ProcessOptions(landmarker=True))
+    assert "2dfan4" not in FacePipeline.required_models(ProcessOptions(landmarker=False))

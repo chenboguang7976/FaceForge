@@ -11,7 +11,8 @@ from faceforge.ui.i18n import i18n, tr
 from faceforge.ui.theme import theme
 from faceforge.ui.widgets.animated import Button, SmoothProgress
 
-CATEGORY_KEYS = {"detector": "models.cat.detector", "recognizer": "models.cat.recognizer",
+CATEGORY_KEYS = {"detector": "models.cat.detector", "landmarker": "models.cat.landmarker",
+                 "recognizer": "models.cat.recognizer",
                  "swapper": "models.cat.swapper", "enhancer": "models.cat.enhancer", "mask": "models.cat.mask"}
 
 
