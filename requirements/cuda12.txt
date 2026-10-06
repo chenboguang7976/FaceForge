@@ -1,3 +1,3 @@
 -r base.txt
 # Last onnxruntime-gpu line built on CUDA 12, which still supports Pascal (GTX 10xx).
-onnxruntime-gpu[cuda,cudnn]>=1.21,<1.27
+onnxruntime-gpu[cuda,cudnn]>=1.30.0,<1.31
