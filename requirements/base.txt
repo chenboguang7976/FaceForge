@@ -4,7 +4,7 @@
 #   requirements/directml.txt   Any GPU on Windows (NVIDIA, AMD, Intel)   — Lite
 #   requirements/cpu.txt        CPU only; on macOS this includes CoreML
 PySide6-Essentials>=6.7
-opencv-python-headless>=4.9
+opencv-python-headless>=5.0.0.93
 numpy>=1.24
 onnx>=1.16
 psutil>=5.9
