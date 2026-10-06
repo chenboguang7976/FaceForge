@@ -11,4 +11,13 @@ updates:
     directory: /requirements
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    # Requirements use open ">=" ranges, so pip already installs the newest
+    # release; only propose a change when a new release falls outside a range.
+    versioning-strategy: increase-if-necessary
+    groups:
+      python:
+        patterns: ["*"]
+    ignore:
+      # cuda12.txt pins the last CUDA 12 line on purpose (GTX 10xx support);
+      # moving it must be a deliberate decision, not an automatic bump.
+      - dependency-name: onnxruntime-gpu
