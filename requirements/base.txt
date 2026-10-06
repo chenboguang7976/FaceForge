@@ -6,7 +6,7 @@
 PySide6-Essentials>=6.7
 opencv-python-headless>=4.9
 numpy>=1.24
-onnx>=1.16
+onnx>=1.23.1
 psutil>=5.9
 requests>=2.31
 imageio-ffmpeg>=0.5
