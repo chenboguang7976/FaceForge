@@ -1,180 +1,181 @@
-# 🔥 FaceForge
+# FaceForge
 
-**Open-source AI Face Swap & Enhancement Tool — Offline, GPU-Accelerated, Desktop App**
-
-FaceForge is a powerful desktop application for AI-powered face swapping, face enhancement, face editing, and video processing. Built with a clean modular architecture, premium Qt6 interface, and ONNX Runtime for fast GPU inference.
+**AI face swap and face restoration studio for Windows, macOS and Linux. Runs offline on your own GPU.**
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![Qt](https://img.shields.io/badge/GUI-PySide6%20(Qt6)-green?logo=qt)
 ![ONNX](https://img.shields.io/badge/Inference-ONNX%20Runtime-orange)
 ![License](https://img.shields.io/badge/License-GPLv3-red)
 
----
+![FaceForge main window](docs/screenshots/main-dark.png)
 
-## ✨ Features
+## Editions
 
-### 🎭 Face Swap
-- **Inswapper 128** — High quality face swap (InsightFace)
-- **InStyleSwapper 256** — Style-preserving swap (Versions A/B/C)
-- **SimSwap 512** — SimSwap architecture
-- **GhostFace v1/v2/v3** — Ghost face swap network
-- **CSCS 256** — Cross-Subject face swap
-- **DeepFaceLive (DFM)** — Real-time face swap models
-- **UniFace / HyperSwap / BlendSwap** — Additional swap models
+FaceForge comes in two editions built from the same code.
 
-### ✨ Face Enhancement
-- **GFPGAN v1.2/1.3/1.4** — Generative face restoration
-- **CodeFormer** — Code-based face restoration with fidelity control
-- **GPEN-BFR** — GAN Prior face restoration (256/512/1024/2048)
-- **RestoreFormer++** — Transformer-based restoration
-- **VQFR v2** — Vector-quantized face restoration
+| | **FaceForge Pro** | **FaceForge Lite** |
+|---|---|---|
+| Goal | Best possible output quality | Smooth on low-end laptops |
+| Platforms | Windows (CUDA), macOS (Apple Silicon), Linux (CUDA) | Windows (DirectML) |
+| Default preset | Maximum (high-end GPU) or Quality | Balanced (Fast with 8 GB RAM or less) |
+| Default swap | HyperSwap 256 with 2×2 pixel boost | InSwapper 128 |
+| Masks | Occlusion + face parsing | Soft box mask |
+| Recommended hardware | NVIDIA RTX 20xx+ with 8 GB+ VRAM, or Apple M1 Pro+; 16 GB+ RAM | Any DirectX 12 GPU (e.g. GTX 1050 4 GB), 8–16 GB RAM, 4-core CPU |
 
-### 🎨 Face Editing (Live Portrait)
-- **Expression control** — Eyebrow, eye, mouth manipulation
-- **Head pose** — Pitch, yaw, roll adjustment
-- **Eye gaze** — Horizontal/vertical gaze direction
-- **Age modification** — AI-powered age adjustment
-- **Expression restoration** — Preserve original expressions
+Both editions can reach every setting. The edition only decides the defaults.
+Pro shows a warning on machines below its requirements. Lite's DirectML
+backend runs on NVIDIA, AMD and Intel GPUs without installing CUDA.
 
-### 🖼️ Frame Enhancement
-- **RealESRGAN** x2/x4/x8 — Real-world super resolution
-- **BSRGAN** x2/x4 — Blind super resolution
-- **UltraSharp / UltraMix** x4 — Sharp upscaling
-- **SPAN / SwinIR / SiAx** x4 — Modern SR architectures
-- **Real-HAT** x4 — Hybrid attention upscaling
+## Features
 
-### 🎬 Video & Media
-- Video face swap with frame-by-frame processing
-- Webcam real-time face swap
-- Image batch processing
-- Audio preservation during video processing
-- Virtual camera output (pyvirtualcam)
-- Frame colorization (DDColor, Deoldify)
+- **Face swap**: HyperSwap 1A/1B/1C (256 px), the newest open model, with
+  its own blend mask. InSwapper 128 (FP32/FP16) for speed. **Pixel boost**
+  renders faces at 2–4× the model resolution.
+- **Face restoration**: GFPGAN 1.4, CodeFormer (fidelity control), GPEN-BFR
+  256/512, RestoreFormer++.
+- **Masks**: soft box with padding, XSeg occlusion (hands, hair, glasses stay
+  in front), BiSeNet face parsing, skin-tone matching.
+- **Face selection**: all faces, the largest face, or one person picked from
+  the target. That person is followed through the whole video.
+- **Video**:
+  - Frames stream straight into FFmpeg, with no temporary images.
+  - Hardware encoding (NVENC / Quick Sync / AMF / VideoToolbox).
+  - The original audio is kept.
+  - **Resumable**: stop or crash at any point and the next run continues
+    from the last finished segment.
+- **Batch**: select several images at once.
+- **Live preview**: before/after compare slider, zoom and pan. The preview
+  updates as you change settings.
+- **One-click presets**: Fast, Balanced, Quality, Maximum.
+- **Automatic hardware tuning**:
+  - Detects RAM, VRAM and GPU generation.
+  - Uses FP16 only where it is actually faster.
+  - Never uses CUDA 13 on GPUs it doesn't support.
+  - Caps the models kept in memory so 4 GB GPUs don't run out.
+- **Model manager**: downloads exactly what you need, with resume and size check.
+- **Interface**:
+  - Language switcher with English, 中文 and Tiếng Việt flags.
+  - Dark and light themes.
+  - Smooth animated controls.
 
-### 🎵 Audio
-- Voice extraction (UVR MDX-Net)
-- Lip sync (Wav2Lip / Wav2Lip-GAN)
+## Download
 
----
+Ready-to-run builds come from GitHub Actions (**Actions → Build → Artifacts**),
+or from **Releases** for tagged versions:
 
-## 🚀 Quick Start
+| File | For |
+|---|---|
+| `FaceForge-Lite-Windows-x64.zip` | Windows laptops / older GPUs (DirectML) |
+| `FaceForge-Pro-Windows-x64-CUDA.7z` | Windows + NVIDIA RTX 20xx or newer (open with 7-Zip) |
+| `FaceForge-Pro-macOS-AppleSilicon.dmg` | macOS 12+ on Apple Silicon |
+| `FaceForge-Pro-Linux-x64-CUDA.tar.xz` | Linux + NVIDIA RTX 20xx or newer |
 
-### Prerequisites
-- **Python 3.10+**
-- **NVIDIA GPU** with CUDA support (recommended) or CPU-only mode
-- **FFmpeg** in system PATH
+The CUDA builds include about 2 GB of NVIDIA libraries. If an archive would
+be larger than GitHub's 2 GB file limit, it is split into numbered parts
+(`.7z.001`, `.002`… or `.tar.xz.000`, `.001`…). Download all parts:
+7-Zip opens the first `.7z` part directly, and on Linux run
+`cat *.tar.xz.* | tar -xJ`.
 
-### Installation
+To run a build:
+
+- **Windows**: unzip and run `FaceForge Lite.exe` / `FaceForge Pro.exe`.
+  - On laptops with two GPUs, go to *Settings → System → Display → Graphics*
+    and set the exe to **High performance**. This makes DirectML use the
+    NVIDIA GPU.
+- **macOS**: the app is not notarized. The first time, right-click it → **Open**.
+- **Linux**: extract it and run `./FaceForge\ Pro/FaceForge\ Pro`.
+
+The models (0.7–1.1 GB per preset) download automatically on first use. See
+[MODELS.md](MODELS.md).
+
+## Run from source
 
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/FaceForge.git
+git clone https://github.com/chenboguang7976/FaceForge.git
 cd FaceForge
-
-# Create virtual environment
 python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS / Linux
 
-# Install dependencies
-pip install -r requirements.txt
+# Pick ONE backend:
+pip install -r requirements/directml.txt   # Windows, any GPU (GTX 10xx, AMD, Intel)
+pip install -r requirements/cuda.txt       # NVIDIA RTX 20xx+ (CUDA 13, fastest)
+pip install -r requirements/cuda12.txt     # NVIDIA GTX 10xx/16xx via CUDA 12
+pip install -r requirements/cpu.txt        # CPU only; macOS (includes CoreML)
 
-# Download models (see MODELS.md for details)
-# Place model files in the ./models/ directory
-
-# Run
-python run.py
+python run.py                   # add --edition lite or --edition pro to force an edition
 ```
 
-### Models Setup
-See **[MODELS.md](MODELS.md)** for complete model documentation, download links, and directory structure.
+CUDA and cuDNN are installed as pip packages, so no CUDA Toolkit install is
+needed. An existing toolkit such as CUDA 11.8 can stay installed and is not
+used.
 
-The `models/` directory is **not included** in this repository due to file sizes (~25GB total). You need to download the models separately.
+**GTX 10xx (Pascal) note:** CUDA 13, which onnxruntime-gpu 1.27+ uses,
+dropped Pascal. Use `directml.txt` or `cuda12.txt` on those cards.
 
----
+## Build the apps yourself
 
-## 📁 Project Structure
+```bash
+pip install -r requirements/<backend>.txt -r requirements/build.txt
+python packaging/make_icon.py
+FACEFORGE_EDITION=lite pyinstaller packaging/faceforge.spec --noconfirm   # or pro
+"dist/FaceForge Lite/FaceForge Lite" --selftest                           # smoke test
+```
+
+`.github/workflows/build.yml` builds all four packages, runs the tests and a
+self-test of each frozen app. Pushing a `v*` tag publishes a release.
+
+## Project structure
 
 ```
 FaceForge/
-├── run.py                  # Application entry point
-├── requirements.txt        # Python dependencies
-├── MODELS.md              # Model documentation & download guide
+├── run.py                       # entry point (--debug, --edition, --selftest)
 ├── faceforge/
-│   ├── config.py          # Settings & configuration management
-│   ├── core/              # Core processing engine
-│   │   ├── models_processor.py  # ONNX model loading & inference
-│   │   ├── models_data.py       # Model registry & metadata
-│   │   ├── video_processor.py   # Video I/O & frame management
-│   │   └── frame_worker.py      # Multi-threaded frame processing
-│   ├── processors/        # AI processing modules
-│   │   ├── face_detector.py     # Face detection engines
-│   │   ├── face_landmark.py     # Facial landmark detection
-│   │   ├── face_swapper.py      # Face swap algorithms
-│   │   ├── face_enhancer.py     # Face restoration/enhancement
-│   │   ├── face_editor.py       # Live Portrait face editing
-│   │   ├── face_mask.py         # Face masking & segmentation
-│   │   ├── frame_enhancer.py    # Frame upscaling/colorization
-│   │   └── utils/               # Processing utilities
-│   ├── ui/                # PySide6 Qt6 GUI
-│   │   ├── main_window.py       # Main application window
-│   │   ├── theme.py             # Theme management
-│   │   ├── styles/              # QSS stylesheets
-│   │   └── widgets/             # Custom Qt widgets
-│   └── helpers/           # Utility modules
-│       ├── downloader.py        # Model download utility
-│       └── misc.py              # Miscellaneous helpers
-└── models/                # Model files (user-provided)
+│   ├── edition.py               # Pro / Lite
+│   ├── config.py                # settings.json (atomic save, migration)
+│   ├── core/
+│   │   ├── hardware.py          # RAM/VRAM/GPU detection, device selection
+│   │   ├── presets.py           # Fast / Balanced / Quality / Maximum
+│   │   ├── models_data.py       # model registry (URLs, sizes)
+│   │   ├── models_processor.py  # ONNX Runtime sessions, LRU cache, fallbacks
+│   │   ├── pipeline.py          # detect → select → swap → mask → paste → restore
+│   │   └── video_processor.py   # FFmpeg pipeline, segments, resume, audio
+│   ├── processors/              # detector, recognizer, swapper, enhancer, masks
+│   ├── helpers/                 # paths, logging, image I/O, ffmpeg, downloader
+│   └── ui/                      # Qt UI: main window, settings panel, i18n, theme, widgets
+├── packaging/                   # PyInstaller spec, icon
+├── requirements/                # one file per inference backend
+└── tests/                       # pytest suite (unit + optional end-to-end)
 ```
 
----
+Run the tests with `pytest`. For the end-to-end test, set
+`FACEFORGE_TEST_MODELS` (a models folder) and `FACEFORGE_TEST_IMAGE`.
 
-## ⚙️ Configuration
+## Hướng dẫn nhanh (Tiếng Việt)
 
-Settings are stored in `settings.json` and can be configured via the GUI:
+1. Tải bản phù hợp:
+   - Máy yếu hoặc GPU cũ (ví dụ GTX 1050): **FaceForge Lite**.
+   - Máy mạnh (RTX, Apple Silicon): **FaceForge Pro**.
+2. Mở app, bấm lá cờ 🇻🇳 ở góc trên bên phải để chuyển sang tiếng Việt.
+3. Kéo ảnh khuôn mặt nguồn vào ô bên trái, rồi kéo ảnh hoặc video đích vào khung giữa.
+4. Chọn mức chất lượng (Nhanh / Cân bằng / Chất lượng / Tối đa) và xem trước ngay.
+5. Bấm **Bắt đầu**. Kết quả được lưu trong thư mục `output`.
+   - Video đang làm dở có thể tiếp tục ở lần sau.
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `device` | Processing device | `cuda` |
-| `max_threads` | Worker threads | `4` |
-| `output_quality` | JPEG output quality | `80` |
-| `keep_fps` | Preserve original FPS | `true` |
-| `face_detector` | Detection model | `RetinaFace` |
-| `face_enhancer` | Enhancement model | `GFPGAN 1.4` |
-| `face_swapper` | Swap model | `Inswapper128` |
+## Responsible use
 
----
+Only process faces of people who have given their consent. Do not use
+FaceForge to deceive, harass, impersonate or create non-consensual content,
+and follow the laws where you live. You are responsible for what you create.
 
-## 🤝 Contributing
+## Credits
 
-Contributions are welcome! Please read the following before contributing:
+[InsightFace](https://github.com/deepinsight/insightface) ·
+[FaceFusion](https://github.com/facefusion/facefusion) (model assets) ·
+[GFPGAN](https://github.com/TencentARC/GFPGAN) ·
+[CodeFormer](https://github.com/sczhou/CodeFormer) ·
+[GPEN](https://github.com/yangxy/GPEN) ·
+[VisoMaster](https://github.com/visomaster/visomaster) ·
+[Rope](https://github.com/Hillobar/Rope)
 
-1. **Backend (Python)**: Processing logic in `faceforge/processors/`
-2. **Frontend (Qt)**: UI components in `faceforge/ui/`
-3. **Models**: See `MODELS.md` for model integration guide
-
-### Development Setup
-```bash
-pip install -r requirements.txt
-python run.py --debug
-```
-
----
-
-## 📜 License
-
-This project is licensed under the **GNU General Public License v3.0** — see [LICENSE](LICENSE) for details.
-
-### Credits & Acknowledgments
-- [InsightFace](https://github.com/deepinsight/insightface) — Face analysis & Inswapper
-- [GFPGAN](https://github.com/TencentARC/GFPGAN) — Face restoration
-- [CodeFormer](https://github.com/sczhou/CodeFormer) — Face restoration
-- [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) — Image super resolution
-- [LivePortrait](https://github.com/KwaiVGI/LivePortrait) — Portrait animation
-- [VisoMaster](https://github.com/visomaster/visomaster) — Original unified tool
-- [Rope](https://github.com/Hillobar/Rope) — Video face swap
-- [FaceFusion](https://github.com/facefusion/facefusion) — Face processing framework
-
----
-
-> ⚠️ **Disclaimer**: This tool is intended for research and educational purposes. Users are responsible for ensuring ethical and legal use. Do not use this tool to create misleading or harmful content.
+Licensed under the GNU GPL v3.

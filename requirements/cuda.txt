@@ -1,0 +1,3 @@
+-r base.txt
+# CUDA 13 + cuDNN 9 come as pip wheels; no separate CUDA toolkit install needed.
+onnxruntime-gpu[cuda,cudnn]>=1.27

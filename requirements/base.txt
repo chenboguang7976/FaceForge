@@ -1,0 +1,12 @@
+# Shared dependencies (no inference backend). Pick one backend file instead:
+#   requirements/cuda.txt       NVIDIA RTX 20xx and newer (CUDA 13)       — Pro
+#   requirements/cuda12.txt     NVIDIA GTX 10xx / 16xx (CUDA 12)
+#   requirements/directml.txt   Any GPU on Windows (NVIDIA, AMD, Intel)   — Lite
+#   requirements/cpu.txt        CPU only; on macOS this includes CoreML
+PySide6-Essentials>=6.7
+opencv-python-headless>=4.9
+numpy>=1.24
+onnx>=1.16
+psutil>=5.9
+requests>=2.31
+imageio-ffmpeg>=0.5

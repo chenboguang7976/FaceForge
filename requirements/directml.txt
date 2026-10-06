@@ -1,0 +1,2 @@
+-r base.txt
+onnxruntime-directml>=1.20
